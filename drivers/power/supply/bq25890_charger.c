@@ -951,6 +951,8 @@ static int bq25890_probe(struct i2c_client *client,
 	if (ret) {
 		dev_err(dev, "Cannot read chip ID or unknown chip.\n");
 		return ret;
+	} else {
+		dev_info(dev, "Found %s", bq25890_chip_name[bq->chip_version]);
 	}
 
 	if (!dev->platform_data) {
@@ -973,8 +975,7 @@ static int bq25890_probe(struct i2c_client *client,
 		client->irq = bq25890_irq_probe(bq);
 
 	if (client->irq < 0) {
-		dev_err(dev, "No irq resource found.\n");
-		return client->irq;
+		dev_warn(dev, "No irq resource found.\n");
 	}
 
 	/* OTG reporting */
@@ -985,12 +986,14 @@ static int bq25890_probe(struct i2c_client *client,
 		usb_register_notifier(bq->usb_phy, &bq->usb_nb);
 	}
 
-	ret = devm_request_threaded_irq(dev, client->irq, NULL,
-					bq25890_irq_handler_thread,
-					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-					BQ25890_IRQ_PIN, bq);
-	if (ret)
-		goto irq_fail;
+	if (client->irq >= 0) {
+		ret = devm_request_threaded_irq(dev, client->irq, NULL,
+						bq25890_irq_handler_thread,
+						IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+						BQ25890_IRQ_PIN, bq);
+		if (ret)
+			goto irq_fail;
+	}
 
 	ret = bq25890_power_supply_init(bq);
 	if (ret < 0) {

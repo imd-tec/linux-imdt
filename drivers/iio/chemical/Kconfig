@@ -56,6 +56,23 @@ config BME680_SPI
 	depends on SPI && BME680
 	select REGMAP_SPI
 
+config BME688
+	tristate "Bosch Sensortec BME688 sensor driver"
+	depends on I2C
+	select REGMAP
+	select BME688_I2C if I2C
+	help
+	  Say yes here to build support for Bosch Sensortec BME688 sensor with
+	  temperature, pressure, humidity and gas sensing capability.
+
+	  This driver can also be built as a module. If so, the module for I2C
+	  would be called bme688_i2c.
+
+config BME688_I2C
+	tristate
+	depends on I2C && BME688
+	select REGMAP_I2C
+
 config CCS811
 	tristate "AMS CCS811 VOC sensor"
 	depends on I2C

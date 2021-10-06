@@ -1,0 +1,11 @@
+Bosch Sensortec BME688 pressure/temperature/humidity/voc sensors
+
+Required properties:
+- compatible: must be "bosch,bme688"
+
+Example:
+
+bme688@76 {
+          compatible = "bosch,bme688";
+          reg = <0x76>;
+};
