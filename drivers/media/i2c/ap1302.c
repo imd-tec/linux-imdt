@@ -463,7 +463,7 @@ struct ap1302_firmware_header {
 	u16 crc;
 } __packed;
 
-#define MAX_FW_LOAD_RETRIES 3
+#define MAX_FW_LOAD_RETRIES 1
 
 static const struct ap1302_format_info supported_video_formats[] = {
 	{
@@ -476,6 +476,12 @@ static const struct ap1302_format_info supported_video_formats[] = {
 			 | AP1302_PREVIEW_OUT_FMT_FST_YUV_420,
 	},
 };
+
+/* Module parameters */
+
+static bool disable_power_down;
+module_param(disable_power_down, bool, 0644);
+MODULE_PARM_DESC(disable_power_down, "Disable the power-down functionality");
 
 /* -----------------------------------------------------------------------------
  * Sensor Info
@@ -820,7 +826,6 @@ static int ap1302_sipm_addr_set(void *arg, u64 val)
 	struct ap1302_device *ap1302 = arg;
 
 	if (val & ~0x8700ffff) {
-		pr_info("ap1302: %llx\n", (val & ~0x8700ffff));
 		return -EINVAL;
 	}
 
@@ -1092,8 +1097,6 @@ static void ap1302_power_off_sensors(struct ap1302_device *ap1302)
 
 static int ap1302_power_on(struct ap1302_device *ap1302)
 {
-	dev_info(ap1302->dev, "power on");
-
 	usleep_range(2000, 3000);
 
 	int ret;
@@ -1120,8 +1123,6 @@ static int ap1302_power_on(struct ap1302_device *ap1302)
 	/* 4. Turn the clock on. */
 	ret = clk_prepare_enable(ap1302->clock);
 
-//	pr_info(">>>> clk_prepare_enable returned %d\n", ret);
-
 	if (ret < 0) {
 		dev_err(ap1302->dev, "Failed to enable clock: %d\n", ret);
 		return ret;
@@ -1143,31 +1144,33 @@ static int ap1302_power_on(struct ap1302_device *ap1302)
 
 static void ap1302_power_off(struct ap1302_device *ap1302)
 {
-	dev_info(ap1302->dev, "power off");
+	if (disable_power_down) {
+		dev_warn(ap1302->dev, "Power control disabled");
+	} else {
+		/* 1. Assert RESET. */
+		if (ap1302->reset_gpio) {
+			gpiod_set_value(ap1302->reset_gpio, 1);
+		}
 
-	/* 1. Assert RESET. */
-	if (ap1302->reset_gpio) {
-		gpiod_set_value(ap1302->reset_gpio, 1);
-	}
+		/* 2. Turn the clock off. */
+		clk_disable_unprepare(ap1302->clock);
 
-	/* 2. Turn the clock off. */
-	clk_disable_unprepare(ap1302->clock);
+		/* 3. Assert STANDBY. */
+		if (ap1302->standby_gpio) {
+			gpiod_set_value(ap1302->standby_gpio, 1);
+			usleep_range(500, 1000);
+		}
 
-	/* 3. Assert STANDBY. */
-	if (ap1302->standby_gpio) {
-		gpiod_set_value(ap1302->standby_gpio, 1);
-		usleep_range(500, 1000);
-	}
+		/* 4. Power down the regulators. To be implemented. */
+		if (ap1302->power_gpio) {
+			gpiod_set_value(ap1302->power_gpio, 0);
+		}
 
-	/* 4. Power down the regulators. To be implemented. */
-	if (ap1302->power_gpio) {
-		gpiod_set_value(ap1302->power_gpio, 0);
-	}
-
-	/* 5. De-assert STANDBY. */
-	if (ap1302->standby_gpio) {
-		usleep_range(500, 1000);
-		gpiod_set_value(ap1302->standby_gpio, 0);
+		/* 5. De-assert STANDBY. */
+		if (ap1302->standby_gpio) {
+			usleep_range(500, 1000);
+			gpiod_set_value(ap1302->standby_gpio, 0);
+		}
 	}
 }
 
@@ -1239,7 +1242,7 @@ static int ap1302_configure(struct ap1302_device *ap1302)
 
 static int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 {
-	dev_info(ap1302->dev, "stream %s", stall ? "stopped" : "started");
+	dev_dbg(ap1302->dev, "stream %s", stall ? "stopped" : "started");
 
 	int ret = 0;
 
@@ -1830,8 +1833,6 @@ static int ap1302_get_selection(struct v4l2_subdev *sd,
 	struct ap1302_device *ap1302 = to_ap1302(sd);
 	const struct ap1302_size *resolution = &ap1302->sensor_info->resolution;
 
-	pr_info("ap1302: resolution = %u x %u\n", resolution->width, resolution->height);
-
 	switch (sel->target) {
 	case V4L2_SEL_TGT_NATIVE_SIZE:
 	case V4L2_SEL_TGT_CROP_BOUNDS:
@@ -1852,7 +1853,7 @@ static int ap1302_get_selection(struct v4l2_subdev *sd,
 
 static int ap1302_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	dev_info(sd->dev, "%s stream", enable ? "enable" : "disable");
+	dev_dbg(sd->dev, "%s stream", enable ? "enable" : "disable");
 
 	struct ap1302_device *ap1302 = to_ap1302(sd);
 	int ret;
@@ -2498,7 +2499,7 @@ static int ap1302_write_fw_window(struct ap1302_device *ap1302, const u8 *buf,
 		write_addr = *win_pos + AP1302_FW_WINDOW_OFFSET;
 		write_size = min(len, AP1302_FW_WINDOW_SIZE - *win_pos);
 
-		dev_info(ap1302->dev, "%u bytes remaining", len);
+		dev_dbg(ap1302->dev, "%u bytes remaining", len);
 
 		ret = regmap_raw_write(ap1302->regmap16, write_addr, buf,
 				       write_size);
@@ -2530,7 +2531,7 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	unsigned int crc;
 	int ret;
 
-	dev_info(ap1302->dev, "loading firmware");
+	dev_info(ap1302->dev, "Loading firmware");
 
 	fw_hdr = (const struct ap1302_firmware_header *)ap1302->fw->data;
 	fw_data = (u8 *)&fw_hdr[1];
@@ -2567,6 +2568,8 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	ret = ap1302_read(ap1302, AP1302_SIP_CRC, &crc);
 	if (ret)
 		return ret;
+
+	dev_info(ap1302->dev, "Finished loading firmware");
 
 	if (crc != fw_hdr->crc) {
 		dev_warn(ap1302->dev,
@@ -2942,7 +2945,7 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 	if (ret)
 		goto error_hw_cleanup;
 
-	dev_info(ap1302->dev, "sensor ready");
+	dev_info(ap1302->dev, "Sensor ready");
 
 	return 0;
 
