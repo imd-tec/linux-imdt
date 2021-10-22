@@ -467,7 +467,7 @@ struct ap1302_firmware_header {
 
 static const struct ap1302_format_info supported_video_formats[] = {
 	{
-		.code = MEDIA_BUS_FMT_UYVY8_1X16,
+		.code = MEDIA_BUS_FMT_UYVY8_2X8,
 		.out_fmt = AP1302_PREVIEW_OUT_FMT_FT_YUV_JFIF
 			 | AP1302_PREVIEW_OUT_FMT_FST_YUV_422,
 	}, {
@@ -488,41 +488,13 @@ MODULE_PARM_DESC(disable_power_down, "Disable the power-down functionality");
  */
 
 static const struct ap1302_sensor_info ap1302_sensor_info[] = {
-	/*{
-		.model = "onnn,ar0144",
-		.name = "ar0144",
-		.i2c_addr = 0x10,
-		.resolution = { 1280, 800 },
-		.format = MEDIA_BUS_FMT_SGRBG12_1X12,
-		.supplies = (const struct ap1302_sensor_supply[]) {
-			{ "vaa", 0 },
-			{ "vddio", 0 },
-			{ "vdd", 0 },
-			{ NULL, 0 },
-		},
-	}, {
-		.model = "onnn,ar0330",
-		.name = "ar0330",
-		.i2c_addr = 0x10,
-		.resolution = { 2304, 1536 },
-		.format = MEDIA_BUS_FMT_SGRBG12_1X12,
-		.supplies = (const struct ap1302_sensor_supply[]) {
-			{ "vddpll", 0 },
-			{ "vaa", 0 },
-			{ "vdd", 0 },
-			{ "vddio", 0 },
-			{ NULL, 0 },
-		},
-	},*/ {
+	{
 		.model = "onnn,ar1335",
 		.name = "ar1335",
 		.i2c_addr = 0x36,
 		.resolution = { 4208, 3120 },
 		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
 		.supplies = (const struct ap1302_sensor_supply[]) {
-//			{ "vaa", 0 },
-//			{ "vddio", 0 },
-//			{ "vdd", 0 },
 			{ NULL, 0 },
 		},
 	},
@@ -1515,36 +1487,36 @@ static const struct v4l2_ctrl_config ap1302_ctrls[] = {
 		.id = V4L2_CID_GAMMA,
 		.name = "Gamma",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0x0100,
-		.max = 0xFFFF,
-		.step = 0x100,
-		.def = 0x1000,
+		.min = -32768,
+		.max = 32768,
+		.step = 1,
+		.def = 0,
 	}, {
 		.ops = &ap1302_ctrl_ops,
 		.id = V4L2_CID_CONTRAST,
 		.name = "Contrast",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0x100,
-		.max = 0xFFFF,
-		.step = 0x100,
-		.def = 0x100,
+		.min = -32768,
+		.max = 0x5999,
+		.step = 1,
+		.def = 0,
 	}, {
 		.ops = &ap1302_ctrl_ops,
 		.id = V4L2_CID_BRIGHTNESS,
 		.name = "Brightness",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0x100,
-		.max = 0xFFFF,
-		.step = 0x100,
-		.def = 0x100,
+		.min = -4096,
+		.max = 4096,
+		.step = 1,
+		.def = 0,
 	}, {
 		.ops = &ap1302_ctrl_ops,
 		.id = V4L2_CID_SATURATION,
 		.name = "Saturation",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0x0100,
-		.max = 0xFFFF,
-		.step = 0x100,
+		.min = 0,
+		.max = 0x4000,
+		.step = 1,
 		.def = 0x1000,
 	}, {
 		.ops = &ap1302_ctrl_ops,
@@ -1569,17 +1541,17 @@ static const struct v4l2_ctrl_config ap1302_ctrls[] = {
 		.id = V4L2_CID_GAIN,
 		.name = "Gain",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0x0100,
+		.min = 0,
 		.max = 0xFFFF,
-		.step = 0x100,
+		.step = 1,
 		.def = 0x100,
 	}, {
 		.ops = &ap1302_ctrl_ops,
 		.id = V4L2_CID_ZOOM_ABSOLUTE,
-		.min = 0x0100,
-		.max = 0x1000,
+		.min = 256,
+		.max = 4096,
 		.step = 1,
-		.def = 0x0100,
+		.def = 256,
 	}, {
 		.ops = &ap1302_ctrl_ops,
 		.id = V4L2_CID_COLORFX,
