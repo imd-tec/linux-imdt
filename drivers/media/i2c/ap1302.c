@@ -463,7 +463,7 @@ struct ap1302_firmware_header {
 	u16 crc;
 } __packed;
 
-#define MAX_FW_LOAD_RETRIES 1
+#define MAX_FW_LOAD_RETRIES 3
 
 static const struct ap1302_format_info supported_video_formats[] = {
 	{
@@ -482,6 +482,10 @@ static const struct ap1302_format_info supported_video_formats[] = {
 static bool disable_power_down;
 module_param(disable_power_down, bool, 0644);
 MODULE_PARM_DESC(disable_power_down, "Disable the power-down functionality");
+
+static bool retry_firmware;
+module_param(retry_firmware, bool, 0644);
+MODULE_PARM_DESC(retry_firmware, "If set, only a single AP1302 ISP is present");
 
 /* -----------------------------------------------------------------------------
  * Sensor Info
@@ -2599,7 +2603,7 @@ static int ap1302_detect_chip(struct ap1302_device *ap1302)
 
 static int ap1302_hw_init(struct ap1302_device *ap1302)
 {
-	unsigned int retries;
+	unsigned int retries, number_of_retries;
 	int ret;
 
 	/* Request and validate the firmware. */
@@ -2615,15 +2619,30 @@ static int ap1302_hw_init(struct ap1302_device *ap1302)
 	if (ret < 0)
 		goto error_firmware;
 
-	ret = ap1302_power_on(ap1302);
-	if (ret < 0)
-		goto error_power;
+	number_of_retries = MAX_FW_LOAD_RETRIES;
 
 	/*
-	 * Load the firmware, retrying in case of CRC errors. The AP1302 is
-	 * reset with a full power cycle between each attempt.
+	 * If more than one ISP, power them both on and only try loading the
+	 * firmware once.
 	 */
-	for (retries = 0; retries < MAX_FW_LOAD_RETRIES; ++retries) {
+	if (!retry_firmware) {
+		number_of_retries = 1;
+
+		ret = ap1302_power_on(ap1302);
+		if (ret < 0)
+			goto error_power;
+	}
+
+	/*
+	 * Load the firmware, retrying in case of CRC errors.
+	 */
+	for (retries = 0; retries < number_of_retries; ++retries) {
+
+		if (retry_firmware) {
+			ret = ap1302_power_on(ap1302);
+			if (ret < 0)
+				goto error_power_sensors;
+		}
 
 		ret = ap1302_detect_chip(ap1302);
 		if (ret)
@@ -2635,9 +2654,13 @@ static int ap1302_hw_init(struct ap1302_device *ap1302)
 
 		if (ret != -EAGAIN)
 			goto error_power;
+
+		if (retry_firmware) {
+			ap1302_power_off(ap1302);
+		}
 	}
 
-	if (retries == MAX_FW_LOAD_RETRIES) {
+	if (retries == number_of_retries) {
 		dev_err(ap1302->dev,
 			"Firmware load retries exceeded, aborting\n");
 		ret = -ETIMEDOUT;
@@ -2873,6 +2896,12 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	ap1302->dev = &client->dev;
 	ap1302->client = client;
+
+	if (retry_firmware) {
+		dev_info(ap1302->dev, "Firmware retries enabled");
+	} else {
+		dev_info(ap1302->dev, "Firmware retries disabled");
+	}
 
 	mutex_init(&ap1302->lock);
 
