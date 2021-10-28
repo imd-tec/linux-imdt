@@ -306,50 +306,6 @@
 
 			sensor@0 {
 				reg = <0>;
-
-				// vdd-supply = <&mt6358_vcamd_reg>;
-				// vaa-supply = <&mt6358_vcama1_reg>;
-				// vddio-supply = <&reg_1p8v_ext>;
-			};
-		};
-	};
-
-	camera@3d {
-		compatible = "onnn,ap1302";
-		reg = <0x3d>;
-
-		// pinctrl-names = "default";
-		// pinctrl-0 = <&pinctrl_csi0_pwn>, <&pinctrl_csi0_stby>, <&pinctrl_csi0_rst>, <&pinctrl_csi_mclk>;
-
-		clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
-		clock-names = "csi_mclk";
-		assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
-		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
-		assigned-clock-rates = <24000000>;
-
-		// reset-gpios = <&gpio1 21 GPIO_ACTIVE_LOW>;
-		// standby-gpios = <&gpio1 20 GPIO_ACTIVE_HIGH>;
-		// power-gpios = <&gpio2 12 GPIO_ACTIVE_HIGH>;
-
-		port {
-			isp2_out: endpoint {
-				remote-endpoint = <&mipi_csi0_ep>;
-				data-lanes = <1 2 3 4>;
-			};
-		};
-
-		sensors {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			onnn,model = "onnn,ar1335";
-
-			sensor@0 {
-				reg = <0>;
-
-				// vdd-supply = <&mt6358_vcamd_reg>;
-				// vaa-supply = <&mt6358_vcama1_reg>;
-				// vddio-supply = <&reg_1p8v_ext>;
 			};
 		};
 	};
@@ -877,23 +833,6 @@
 	};
 };
 
-&mipi_csi_1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-
-	port@1 {
-		reg = <1>;
-		mipi_csi1_ep: endpoint {
-			remote-endpoint = <&isp2_out>;
-			data-lanes = <4>;
-			csis-hs-settle = <13>;
-			csis-clk-settle = <2>;
-			csis-wclk;
-		};
-	};
-};
-
 &cameradev {
 	status = "okay";
 };
@@ -906,14 +845,6 @@
 	};
 
 	m2m_device {
-		status = "okay";
-	};
-};
-
-&isi_1 {
-	status = "okay";
-
-	cap_device {
 		status = "okay";
 	};
 };
