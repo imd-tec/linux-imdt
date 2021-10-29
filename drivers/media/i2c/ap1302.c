@@ -450,6 +450,7 @@ struct ap1302_device {
 		struct dentry *dir;
 		struct mutex lock;
 		u32 sipm_addr;
+		u32 isp_addr;
 	} debugfs;
 };
 
@@ -869,6 +870,71 @@ unlock:
 	return ret;
 }
 
+static int ap1302_isp_addr_get(void *arg, u64 *val)
+{
+	struct ap1302_device *ap1302 = arg;
+
+	mutex_lock(&ap1302->debugfs.lock);
+	*val = ap1302->debugfs.isp_addr;
+	mutex_unlock(&ap1302->debugfs.lock);
+
+	return 0;
+}
+
+static int ap1302_isp_addr_set(void *arg, u64 val)
+{
+	struct ap1302_device *ap1302 = arg;
+
+	mutex_lock(&ap1302->debugfs.lock);
+	ap1302->debugfs.isp_addr = val;
+	mutex_unlock(&ap1302->debugfs.lock);
+
+	return 0;
+}
+
+static int ap1302_isp_data_get(void *arg, u64 *val)
+{
+	struct ap1302_device *ap1302 = arg;
+	u32 value;
+	u32 addr;
+	int ret;
+
+	mutex_lock(&ap1302->debugfs.lock);
+
+	addr = ap1302->debugfs.isp_addr;
+
+	ret = ap1302_read(ap1302, AP1302_REG_16BIT(addr), &value);
+	if (!ret)
+		*val = value;
+
+unlock:
+	mutex_unlock(&ap1302->debugfs.lock);
+
+	return ret;
+}
+
+static int ap1302_isp_data_set(void *arg, u64 val)
+{
+	struct ap1302_device *ap1302 = arg;
+	u32 addr;
+	int ret = 0;
+
+	mutex_lock(&ap1302->debugfs.lock);
+
+	addr = ap1302->debugfs.isp_addr;
+	if (!addr) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	ret = ap1302_write(ap1302, AP1302_REG_16BIT(addr), val, NULL);
+
+unlock:
+	mutex_unlock(&ap1302->debugfs.lock);
+
+	return ret;
+}
+
 static int ap1302_mipi_tclk_post_get(void *arg, u64 *val)
 {
 	struct ap1302_device *ap1302 = arg;
@@ -966,6 +1032,16 @@ DEFINE_DEBUGFS_ATTRIBUTE(ap1302_sipm_addr_fops, ap1302_sipm_addr_get,
 DEFINE_DEBUGFS_ATTRIBUTE(ap1302_sipm_data_fops, ap1302_sipm_data_get,
 			 ap1302_sipm_data_set, "0x%08llx\n");
 
+/*
+ * The isp_addr and isp_data attributes allow for direct access to the ISP
+ * registers.
+ */
+
+DEFINE_DEBUGFS_ATTRIBUTE(ap1302_isp_addr_fops, ap1302_isp_addr_get,
+			 ap1302_isp_addr_set, "0x%04llx\n");
+DEFINE_DEBUGFS_ATTRIBUTE(ap1302_isp_data_fops, ap1302_isp_data_get,
+			 ap1302_isp_data_set, "0x%04llx\n");
+
 /* The debugfs is to read and write mipi clk parameters tclk_post values */
 DEFINE_DEBUGFS_ATTRIBUTE(ap1302_mipi_tclk_post_fops, ap1302_mipi_tclk_post_get,
 			 ap1302_mipi_tclk_post_set, "0x%08llx\n");
@@ -993,6 +1069,12 @@ static void ap1302_debugfs_init(struct ap1302_device *ap1302)
 				   ap1302, &ap1302_sipm_addr_fops);
 	debugfs_create_file_unsafe("sipm_data", 0600, ap1302->debugfs.dir,
 				   ap1302, &ap1302_sipm_data_fops);
+
+	debugfs_create_file_unsafe("isp_addr", 0600, ap1302->debugfs.dir,
+				   ap1302, &ap1302_isp_addr_fops);
+	debugfs_create_file_unsafe("isp_data", 0600, ap1302->debugfs.dir,
+				   ap1302, &ap1302_isp_data_fops);
+
 	debugfs_create_file_unsafe("mipi_tclk_post", 0600, ap1302->debugfs.dir,
 				   ap1302, &ap1302_mipi_tclk_post_fops);
 	debugfs_create_file_unsafe("mipi_tclk_pre", 0600, ap1302->debugfs.dir,
