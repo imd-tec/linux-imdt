@@ -5,6 +5,7 @@
  * Copyright (C) 2021, Witekio, Inc.
  * Copyright (C) 2021, Xilinx, Inc.
  * Copyright (C) 2021, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+ * Copyright (C) 2021, IMD Technologies Ltd
  *
  */
 
@@ -153,6 +154,10 @@
 #define AP1302_PREVIEW_OUT_FMT_FST_RAW_GC	(8U << 0)
 #define AP1302_PREVIEW_OUT_FMT_FST_RAW_CURVE	(9U << 0)
 #define AP1302_PREVIEW_OUT_FMT_FST_RAW_CCONV	(10U << 0)
+#define AP1302_PREVIEW_SENSOR_MODE		AP1302_REG_16BIT(0x2014)
+#define AP1302_PREVIEW_MAX_FPS			AP1302_REG_16BIT(0x2020)
+#define AP1302_PREVIEW_AE_UPPER_ET		AP1302_REG_32BIT(0x2024)
+#define AP1302_PREVIEW_AE_MAX_ET		AP1302_REG_32BIT(0x2028)
 #define AP1302_PREVIEW_S1_SENSOR_MODE		AP1302_REG_16BIT(0x202e)
 #define AP1302_PREVIEW_HINF_CTRL		AP1302_REG_16BIT(0x2030)
 #define AP1302_PREVIEW_HINF_CTRL_BT656_LE	BIT(15)
@@ -412,6 +417,12 @@ struct ap1302_sensor {
 	struct media_pad pad;
 };
 
+struct ap1302_sensor_mode {
+	unsigned int mode;
+	struct ap1302_size resolution;
+	struct v4l2_fract min_frame_interval;
+};
+
 static inline struct ap1302_sensor *to_ap1302_sensor(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct ap1302_sensor, sd);
@@ -440,6 +451,8 @@ struct ap1302_device {
 	struct ap1302_format formats[AP1302_PAD_MAX];
 	unsigned int width_factor;
 	bool streaming;
+
+	struct v4l2_fract frame_interval;
 
 	struct v4l2_ctrl_handler ctrls;
 
@@ -509,6 +522,22 @@ static const struct ap1302_sensor_info ap1302_sensor_info_tpg = {
 	.model = "",
 	.name = "tpg",
 	.resolution = { 1920, 1080 },
+};
+
+static const struct ap1302_sensor_mode ap1302_sensor_modes[] = {
+	{
+		.mode = 4,
+		.resolution = { 2104, 780 },
+		.min_frame_interval = { 1, 120 }
+	}, {
+		.mode = 2,
+		.resolution = { 2104, 1560 },
+		.min_frame_interval = { 1, 60 }
+	}, {
+		.mode = 0,
+		.resolution = { 4208, 3120 },
+		.min_frame_interval = { 1, 12 }
+	},
 };
 
 /* -----------------------------------------------------------------------------
@@ -907,7 +936,6 @@ static int ap1302_isp_data_get(void *arg, u64 *val)
 	if (!ret)
 		*val = value;
 
-unlock:
 	mutex_unlock(&ap1302->debugfs.lock);
 
 	return ret;
@@ -1155,9 +1183,9 @@ static void ap1302_power_off_sensors(struct ap1302_device *ap1302)
 
 static int ap1302_power_on(struct ap1302_device *ap1302)
 {
-	usleep_range(2000, 3000);
-
 	int ret;
+
+	usleep_range(2000, 3000);
 
 	/* 0. RESET was asserted when getting the GPIO. */
 
@@ -1300,9 +1328,9 @@ static int ap1302_configure(struct ap1302_device *ap1302)
 
 static int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 {
-	dev_dbg(ap1302->dev, "stream %s", stall ? "stopped" : "started");
-
 	int ret = 0;
+
+	dev_dbg(ap1302->dev, "stream %s", stall ? "stopped" : "started");
 
 	if (stall) {
 		ap1302_write(ap1302, AP1302_SYS_START,
@@ -1813,6 +1841,15 @@ static int ap1302_enum_frame_size(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int ap1302_enum_frame_interval(
+	struct v4l2_subdev *sd,
+	struct v4l2_subdev_pad_config *cfg,
+	struct v4l2_subdev_frame_interval_enum *fie)
+{
+	dev_dbg(sd->dev, "ap1302_enum_frame_interval");
+	return 0;
+}
+
 static int ap1302_get_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_pad_config *cfg,
 			  struct v4l2_subdev_format *fmt)
@@ -1881,6 +1918,14 @@ static int ap1302_set_fmt(struct v4l2_subdev *sd,
 
 	fmt->format = *format;
 
+	for (i = 0; i < ARRAY_SIZE(ap1302_sensor_modes); i++) {
+		if ((format->width <= ap1302_sensor_modes[i].resolution.width) &&
+		    (format->height <= ap1302_sensor_modes[i].resolution.height)) {
+			ap1302_write(ap1302, AP1302_PREVIEW_SENSOR_MODE, ap1302_sensor_modes[i].mode, NULL);
+			break;
+		}
+	}
+
 	return 0;
 }
 
@@ -1909,12 +1954,54 @@ static int ap1302_get_selection(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int ap1302_s_stream(struct v4l2_subdev *sd, int enable)
+static int ap1302_g_frame_interval(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_frame_interval *fi)
 {
-	dev_dbg(sd->dev, "%s stream", enable ? "enable" : "disable");
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+
+	dev_dbg(sd->dev, "ap1302_g_frame_interval");
+
+	fi->interval = ap1302->frame_interval;
+
+	return 0;
+}
+
+static int ap1302_s_frame_interval(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_frame_interval *fi)
+{
+	u32 numerator = fi->interval.numerator;
+	u32 denominator = fi->interval.denominator;
+	u32 val;
+	u32 et;
+
+	// TODO: restrict frame interval based on current sensor mode
 
 	struct ap1302_device *ap1302 = to_ap1302(sd);
+
+	dev_dbg(sd->dev, "ap1302_s_frame_interval\n");
+	dev_dbg(sd->dev, "%d/%d\n", numerator, denominator);
+
+	ap1302->frame_interval = fi->interval;
+
+	val = denominator << 8;
+	val /= numerator;
+	ap1302_write(ap1302, AP1302_PREVIEW_MAX_FPS, val, NULL);
+
+	et = numerator * 1000000;
+	et /= denominator;
+
+	ap1302_write(ap1302, AP1302_PREVIEW_AE_UPPER_ET, et, NULL);
+	ap1302_write(ap1302, AP1302_PREVIEW_AE_MAX_ET, et, NULL);
+
+	return 0;
+}
+
+static int ap1302_s_stream(struct v4l2_subdev *sd, int enable)
+{
 	int ret;
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+
+	dev_dbg(sd->dev, "%s stream", enable ? "enable" : "disable");
 
 	mutex_lock(&ap1302->lock);
 
@@ -2245,6 +2332,7 @@ static const struct v4l2_subdev_pad_ops ap1302_pad_ops = {
 	.init_cfg = ap1302_init_cfg,
 	.enum_mbus_code = ap1302_enum_mbus_code,
 	.enum_frame_size = ap1302_enum_frame_size,
+	.enum_frame_interval = ap1302_enum_frame_interval,
 	.get_fmt = ap1302_get_fmt,
 	.set_fmt = ap1302_set_fmt,
 	.get_selection = ap1302_get_selection,
@@ -2252,6 +2340,8 @@ static const struct v4l2_subdev_pad_ops ap1302_pad_ops = {
 };
 
 static const struct v4l2_subdev_video_ops ap1302_video_ops = {
+	.g_frame_interval = ap1302_g_frame_interval,
+	.s_frame_interval = ap1302_s_frame_interval,
 	.s_stream = ap1302_s_stream,
 };
 
@@ -2971,6 +3061,7 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 	struct ap1302_device *ap1302;
 	unsigned int i;
 	int ret;
+	u32 val;
 
 	ap1302 = devm_kzalloc(&client->dev, sizeof(*ap1302), GFP_KERNEL);
 	if (!ap1302)
@@ -3028,6 +3119,17 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 	if (ret)
 		goto error_hw_cleanup;
 
+	/* Record the current frame interval */
+
+	ap1302_read(ap1302, AP1302_PREVIEW_MAX_FPS, &val);
+
+	if ((val & 0xFF) == 0) {
+		ap1302->frame_interval.numerator = 1;
+		ap1302->frame_interval.denominator = (val >> 8);
+	} else {
+		dev_warn(ap1302->dev, "Fractional frame detected");
+	}
+
 	dev_info(ap1302->dev, "Sensor ready");
 
 	return 0;
@@ -3080,6 +3182,7 @@ module_i2c_driver(ap1302_i2c_driver);
 MODULE_AUTHOR("Florian Rebaudo <frebaudo@witekio.com>");
 MODULE_AUTHOR("Laurent Pinchart <laurent.pinchart@ideasonboard.com>");
 MODULE_AUTHOR("Anil Kumar M <anil.mamidala@xilinx.com>");
+MODULE_AUTHOR("Paul Thomson <pault@imd-tec.com>");
 
 MODULE_DESCRIPTION("ON Semiconductor AP1302 ISP driver");
 MODULE_LICENSE("GPL");
