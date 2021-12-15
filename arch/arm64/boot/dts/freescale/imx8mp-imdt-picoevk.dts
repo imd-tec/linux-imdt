@@ -66,6 +66,12 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 	};
+
+	sound-micfil {
+		compatible = "fsl,imx-audio-micfil";
+		model = "imx-audio-micfil";
+		cpu-dai = <&micfil>;
+	};
 };
 
 &A53_0 {
@@ -386,7 +392,8 @@
 };
 
 &easrc {
-	status = "disabled";
+	fsl,asrc-rate  = <48000>;
+	status = "okay";
 };
 
 &micfil {
@@ -394,7 +401,7 @@
 	pinctrl-0 = <&pinctrl_pdm>;
 	assigned-clocks = <&clk IMX8MP_CLK_PDM>;
 	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <3072000>; /* TODO: confirm clock */
+	assigned-clock-rates = <196608000>;
 	status = "okay";
 };
 
@@ -624,7 +631,7 @@
 
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SAI5_RXC__AUDIOMIX_PDM_CLK		0xd6
+			MX8MP_IOMUXC_SAI3_RXC__AUDIOMIX_PDM_CLK		0xd6
 			MX8MP_IOMUXC_SAI3_RXFS__AUDIOMIX_PDM_BIT_STREAM00	0xd6
 			MX8MP_IOMUXC_SAI5_RXD3__AUDIOMIX_PDM_BIT_STREAM03	0xd6
 		>;
