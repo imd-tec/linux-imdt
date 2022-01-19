@@ -46,6 +46,8 @@
 
 struct mxc_isi_dev;
 
+#define MXC_ISI_OUT_FMT_COUNT	6
+
 enum mxc_isi_out_fmt {
 	MXC_ISI_OUT_FMT_RGBA32	= 0x0,
 	MXC_ISI_OUT_FMT_ABGR32,
