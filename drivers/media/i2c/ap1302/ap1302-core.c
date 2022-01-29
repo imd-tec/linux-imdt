@@ -79,7 +79,7 @@ static const struct ap1302_sensor_info ap1302_sensor_info[] = {
 static const struct ap1302_mode ap1302_other_modes[] = {
 	{
 		.resolution = { 4096, 3072 },
-		.min_frame_interval = { 1, 8 }
+		.min_frame_interval = { 1, 20 }
 	},	{
 		.resolution = { 1920, 1080 },
 		.min_frame_interval = { 1, 30 }
@@ -94,7 +94,10 @@ static const struct ap1302_mode ap1302_other_modes[] = {
 
 static const struct v4l2_fract ap1302_frame_intervals[] = {
 	{ 1, 8 },
+	{ 1, 10 },
+	{ 1, 12 },
 	{ 1, 15 },
+	{ 1, 20 },
 	{ 1, 30 },
 	{ 1, 60 },
 };
