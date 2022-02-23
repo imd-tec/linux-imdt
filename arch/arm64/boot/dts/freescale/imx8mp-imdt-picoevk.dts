@@ -54,7 +54,7 @@
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0 0x30000000>;
+			size = <0 0x20000000>;
 			alloc-ranges = <0 0x40000000 0 0x80000000>;
 			linux,cma-default;
 		};
@@ -249,24 +249,24 @@
 	/* TODO: GG25LJ */
 	/* TODO: HM0360 */
 
-	bq25890 {
-		compatible = "ti,bq25890";
-		reg = <0x6a>;
+	// bq25890 {
+	// 	compatible = "ti,bq25890";
+	// 	reg = <0x6a>;
 
-		// interrupt-parent = <&gpio1>;
-		// interrupts = <16 IRQ_TYPE_EDGE_FALLING>;
+	// 	// interrupt-parent = <&gpio1>;
+	// 	// interrupts = <16 IRQ_TYPE_EDGE_FALLING>;
 
-		ti,battery-regulation-voltage = <4200000>;
-		ti,charge-current = <1000000>;
-		ti,termination-current = <50000>;
-		ti,precharge-current = <128000>;
-		ti,minimum-sys-voltage = <3600000>;
-		ti,boost-voltage = <5000000>;
-		ti,boost-max-current = <500000>;
+	// 	ti,battery-regulation-voltage = <4200000>;
+	// 	ti,charge-current = <1000000>;
+	// 	ti,termination-current = <50000>;
+	// 	ti,precharge-current = <128000>;
+	// 	ti,minimum-sys-voltage = <3600000>;
+	// 	ti,boost-voltage = <5000000>;
+	// 	ti,boost-max-current = <500000>;
 
-		ti,use-ilim-pin;
-		ti,thermal-regulation-threshold = <120>;
-	};
+	// 	ti,use-ilim-pin;
+	// 	ti,thermal-regulation-threshold = <120>;
+	// };
 
 	bme688 {
           compatible = "bosch,bme688";
