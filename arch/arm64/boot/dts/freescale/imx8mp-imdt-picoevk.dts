@@ -228,16 +228,16 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	bmx160 {
-		compatible = "bosch,bmx160";
-		reg = <0x68>;
+	// bmx160 {
+	// 	compatible = "bosch,bmx160";
+	// 	reg = <0x68>;
 
-		pinctrl-0 = <&pinctrl_imu>;
+	// 	pinctrl-0 = <&pinctrl_imu>;
 
-		interrupt-parent = <&gpio3>;
-		interrupts = <14 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "INT1";
-	};
+	// 	interrupt-parent = <&gpio3>;
+	// 	interrupts = <14 IRQ_TYPE_EDGE_RISING>;
+	// 	interrupt-names = "INT1";
+	// };
 };
 
 &i2c3 {
@@ -268,10 +268,10 @@
 	// 	ti,thermal-regulation-threshold = <120>;
 	// };
 
-	bme688 {
-          compatible = "bosch,bme688";
-          reg = <0x76>;
-	};
+	// bme688 {
+	// 	compatible = "bosch,bme688";
+	// 	reg = <0x76>;
+	// };
 };
 
 &i2c4 {
@@ -623,11 +623,11 @@
 		>;
 	};
 
-	pinctrl_imu: imuirq {
-		fsl,pins = <
-			MX8MP_IOMUXC_NAND_DQS__GPIO3_IO14	0x41
-		>;
-	};
+	// pinctrl_imu: imuirq {
+	// 	fsl,pins = <
+	// 		MX8MP_IOMUXC_NAND_DQS__GPIO3_IO14	0x41
+	// 	>;
+	// };
 
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <
