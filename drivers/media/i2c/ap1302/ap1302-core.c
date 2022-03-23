@@ -93,11 +93,13 @@ static const struct ap1302_mode ap1302_other_modes[] = {
 };
 
 static const struct v4l2_fract ap1302_frame_intervals[] = {
+	{ 1, 5 },
 	{ 1, 8 },
 	{ 1, 10 },
 	{ 1, 12 },
 	{ 1, 15 },
 	{ 1, 20 },
+	{ 1, 25 },
 	{ 1, 30 },
 	{ 1, 60 },
 };
