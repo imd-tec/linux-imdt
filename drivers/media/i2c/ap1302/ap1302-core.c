@@ -1053,6 +1053,8 @@ static int ap1302_subdev_registered(struct v4l2_subdev *sd)
 	unsigned int i;
 	int ret;
 
+	dev_dbg(ap1302->dev, "%s", __func__);
+
 	for (i = 0; i < ARRAY_SIZE(ap1302->sensors); ++i) {
 		struct ap1302_sensor *sensor = &ap1302->sensors[i];
 
@@ -1075,6 +1077,25 @@ static int ap1302_subdev_registered(struct v4l2_subdev *sd)
 	}
 
 	return 0;
+}
+
+static void ap1302_subdev_unregistered(struct v4l2_subdev *sd)
+{
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+	int i;
+
+	dev_dbg(ap1302->dev, "%s", __func__);
+
+	for (i = 0; i < ARRAY_SIZE(ap1302->sensors); ++i) {
+		struct ap1302_sensor *sensor = &ap1302->sensors[i];
+
+		if (!sensor->present)
+			continue;
+
+		dev_info(ap1302->dev, "unregistering sensor %u\n", i);
+
+		v4l2_device_unregister_subdev(&sensor->sd);
+	}
 }
 
 static int ap1302_link_setup(struct media_entity *entity,
@@ -1127,6 +1148,7 @@ static const struct v4l2_subdev_ops ap1302_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops ap1302_subdev_internal_ops = {
 	.registered = ap1302_subdev_registered,
+	.unregistered = ap1302_subdev_unregistered,
 };
 
 /*
@@ -1570,6 +1592,8 @@ static void ap1302_cleanup(struct ap1302_device *ap1302)
 	v4l2_fwnode_endpoint_free(&ap1302->bus_cfg);
 
 	mutex_destroy(&ap1302->lock);
+
+	devm_kfree(ap1302->dev, ap1302);
 }
 
 static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -1661,8 +1685,7 @@ error:
 
 static int ap1302_remove(struct i2c_client *client)
 {
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct ap1302_device *ap1302 = to_ap1302(sd);
+	struct ap1302_device *ap1302 = i2c_get_clientdata(client);
 
 	remove_sysfs_attributes(ap1302);
 
@@ -1672,8 +1695,8 @@ static int ap1302_remove(struct i2c_client *client)
 
 	release_firmware(ap1302->fw);
 
-	v4l2_async_unregister_subdev(sd);
-	media_entity_cleanup(&sd->entity);
+	v4l2_async_unregister_subdev(&ap1302->sd);
+	media_entity_cleanup(&ap1302->sd.entity);
 
 	ap1302_ctrls_cleanup(ap1302);
 
