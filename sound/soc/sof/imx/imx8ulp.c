@@ -21,6 +21,7 @@
 
 #include <sound/sof.h>
 #include <sound/sof/xtensa.h>
+#include <linux/arm-smccc.h>
 
 #include "../ops.h"
 #include "../sof-of-dev.h"

@@ -39,6 +39,12 @@
 #define file_to_ctx(file)		\
 	container_of(file->private_data, struct mxc_isi_ctx, fh);
 
+#if defined(CONFIG_IMX8_ISI_CAPTURE)
+extern struct mxc_isi_fmt mxc_isi_out_formats[MXC_ISI_OUT_FMT_COUNT];
+#else
+static struct mxc_isi_fmt mxc_isi_out_formats[MXC_ISI_OUT_FMT_COUNT] = {};
+#endif
+
 struct mxc_isi_fmt mxc_isi_input_formats[] = {
 	/* Pixel link input format */
 	{

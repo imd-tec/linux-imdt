@@ -30,11 +30,66 @@
 
 #include "imx8-isi-hw.h"
 #include "imx8-common.h"
-#include "imx8-isi-fmt.h"
+
+static uint source_format;
+module_param(source_format, uint, 0644);
+MODULE_PARM_DESC(source_format, "Specifies the source format (0 for bypass)");
 
 #define sd_to_cap_dev(ptr)	container_of(ptr, struct mxc_isi_cap_dev, sd)
 static int mxc_isi_cap_streamoff(struct file *file, void *priv,
 				 enum v4l2_buf_type type);
+
+struct mxc_isi_fmt mxc_isi_out_formats[MXC_ISI_OUT_FMT_COUNT] = {
+	{
+		.name		= "RGB24",
+		.fourcc		= V4L2_PIX_FMT_RGB24,
+		.depth		= { 24 },
+		.color		= MXC_ISI_OUT_FMT_RGB32P,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
+	}, {
+		.name		= "BGR24",
+		.fourcc		= V4L2_PIX_FMT_BGR24,
+		.depth		= { 24 },
+		.color		= MXC_ISI_OUT_FMT_BGR32P,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_BGR888_1X24,
+	}, {
+		.name		= "YUYV-16",
+		.fourcc		= V4L2_PIX_FMT_YUYV,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_YUV422_1P8P,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_YUYV8_1X16,
+	}, {
+		.name		= "BGGR10",
+		.fourcc		= V4L2_PIX_FMT_SBGGR10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_SBGGR10_1X10,
+	}, {
+		.name		= "GRBG10",
+		.fourcc		= V4L2_PIX_FMT_SGRBG10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_SGRBG10_1X10,
+	}, {
+		.name		= "GRBG12",
+		.fourcc		= V4L2_PIX_FMT_SGRBG12,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW12,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_SGRBG12_1X12,
+	}
+};
 
 /*
  * Pixel link input format
@@ -53,7 +108,24 @@ struct mxc_isi_fmt mxc_isi_src_formats[] = {
 		.depth		= { 32 },
 		.memplanes	= 1,
 		.colplanes	= 1,
-		.align		= 2,
+	}, {
+		.name		= "BGGR10",
+		.fourcc		= V4L2_PIX_FMT_SBGGR10,
+		.depth		= { 16 },
+		.memplanes	= 1,
+		.colplanes	= 1,
+	}, {
+		.name		= "GRBG10",
+		.fourcc		= V4L2_PIX_FMT_SGRBG10,
+		.depth		= { 16 },
+		.memplanes	= 1,
+		.colplanes	= 1,
+	}, {
+		.name		= "GRBG12",
+		.fourcc		= V4L2_PIX_FMT_SGRBG12,
+		.depth		= { 16 },
+		.memplanes	= 1,
+		.colplanes	= 1,
 	}
 };
 
@@ -92,13 +164,18 @@ struct mxc_isi_fmt *mxc_isi_get_src_fmt(struct v4l2_subdev_format *sd_fmt)
 {
 	u32 index;
 
-	/* two fmt RGB32 and YUV444 from pixellink */
-	if (sd_fmt->format.code == MEDIA_BUS_FMT_YUYV8_1X16 ||
-	    sd_fmt->format.code == MEDIA_BUS_FMT_YVYU8_2X8 ||
-	    sd_fmt->format.code == MEDIA_BUS_FMT_AYUV8_1X32 ||
-	    sd_fmt->format.code == MEDIA_BUS_FMT_UYVY8_2X8 ||
-	    sd_fmt->format.code == MEDIA_BUS_FMT_UYVY8_1X16||
-	    sd_fmt->format.code == MEDIA_BUS_FMT_YUYV8_2X8)
+	if (sd_fmt->format.code == MEDIA_BUS_FMT_SGRBG12_1X12)
+		index = 4;
+	else if (sd_fmt->format.code == MEDIA_BUS_FMT_SGRBG10_1X10)
+		index = 3;
+	else if (sd_fmt->format.code == MEDIA_BUS_FMT_SBGGR10_1X10)
+		index = 2;
+	else if (sd_fmt->format.code == MEDIA_BUS_FMT_YUYV8_1X16 ||
+		 sd_fmt->format.code == MEDIA_BUS_FMT_YVYU8_2X8 ||
+		 sd_fmt->format.code == MEDIA_BUS_FMT_AYUV8_1X32 ||
+		 sd_fmt->format.code == MEDIA_BUS_FMT_UYVY8_2X8 ||
+		 sd_fmt->format.code == MEDIA_BUS_FMT_YUYV8_2X8 ||
+		 sd_fmt->format.code == MEDIA_BUS_FMT_UYVY8_1X16)
 		index = 1;
 	else
 		index = 0;
@@ -960,7 +1037,20 @@ static int mxc_isi_source_fmt_init(struct mxc_isi_cap_dev *isi_cap)
 
 	src_fmt.pad = source_pad->index;
 	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
-	src_fmt.format.code = MEDIA_BUS_FMT_UYVY8_1X16;
+
+	if (source_format) {
+		dev_info(&isi_cap->pdev->dev,
+				"%s: using custom source format (0x%x)\n",
+				__func__,
+				source_format);
+
+		/* Use the user's selection to set the source format */
+		src_fmt.format.code = source_format;
+	} else {
+		/* Use the destination format to set the source format */
+		src_fmt.format.code = dst_f->fmt->mbus_code;
+	}
+
 	src_fmt.format.width = dst_f->width;
 	src_fmt.format.height = dst_f->height;
 	ret = v4l2_subdev_call(src_sd, pad, set_fmt, NULL, &src_fmt);
@@ -1748,6 +1838,21 @@ static const struct v4l2_subdev_internal_ops mxc_isi_capture_sd_internal_ops = {
 	.unregistered = mxc_isi_subdev_unregistered,
 };
 
+static ssize_t source_format_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "0x%04X\n", source_format);
+}
+
+static ssize_t source_format_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	sscanf(buf, "0x%X", &source_format);
+	return count;
+}
+static DEVICE_ATTR_RW(source_format);
+
 static int isi_cap_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1818,6 +1923,8 @@ static int isi_cap_probe(struct platform_device *pdev)
 	v4l2_set_subdevdata(sd, isi_cap);
 	platform_set_drvdata(pdev, isi_cap);
 
+	device_create_file(dev, &dev_attr_source_format);
+
 	pm_runtime_enable(dev);
 	return 0;
 }
@@ -1826,6 +1933,8 @@ static int isi_cap_remove(struct platform_device *pdev)
 {
 	struct mxc_isi_cap_dev *isi_cap = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd = &isi_cap->sd;
+
+	device_remove_file(&pdev->dev, &dev_attr_source_format);
 
 	v4l2_device_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
