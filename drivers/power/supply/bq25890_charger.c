@@ -115,6 +115,8 @@ struct bq25890_device {
 	struct bq25890_state state;
 
 	struct mutex lock; /* protect state data */
+
+	struct gpio_desc *stat_gpio;
 };
 
 static const struct regmap_range bq25890_readonly_reg_ranges[] = {
@@ -1046,6 +1048,15 @@ static int bq25890_probe(struct i2c_client *client,
 
 	if (client->irq < 0)
 		dev_warn(dev, "No irq resource found.\n");
+
+	/* GPIOs */
+
+	bq->stat_gpio = devm_gpiod_get_optional(bq->dev, "stat", GPIOD_IN);
+	if (IS_ERR(bq->stat_gpio)) {
+		dev_err(bq->dev, "Can't get stat GPIO: %ld\n",
+			PTR_ERR(bq->stat_gpio));
+		return PTR_ERR(bq->stat_gpio);
+	}
 
 	/* OTG reporting */
 	bq->usb_phy = devm_usb_get_phy(dev, USB_PHY_TYPE_USB2);

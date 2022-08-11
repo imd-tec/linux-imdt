@@ -305,6 +305,10 @@
 #define AP1302_SIP_CRC				AP1302_REG_16BIT(0xf052)
 
 /* Advanced System Registers */
+#define AP1302_ADV_SYS_RST_EN_0			AP1302_REG_32BIT(0x00200014)
+#define AP1302_ADV_SYS_CLK_EN_0			AP1302_REG_32BIT(0x0020000C)
+#define AP1302_ADV_SYS_DIV_EN			AP1302_REG_32BIT(0x00200008)
+
 #define AP1302_ADV_IRQ_SYS_INTE			AP1302_REG_32BIT(0x00230000)
 #define AP1302_ADV_IRQ_SYS_INTE_TEST_COUNT	BIT(25)
 #define AP1302_ADV_IRQ_SYS_INTE_HINF_1		BIT(24)
@@ -351,6 +355,9 @@
 #define AP1302_LANE_STATE_TURN_S		0xa
 #define AP1302_LANE_STATE_TURN_MARK		0xb
 #define AP1302_LANE_STATE_ERROR_S		0xc
+
+#define AP1302_ADV_SYS_STBY_GPIO_OSEL		AP1302_REG_32BIT(0x002B0020)
+#define AP1302_ADV_SYS_STBY_GPIO_IN_MASK	AP1302_REG_32BIT(0x002B0028)
 
 #define AP1302_ADV_CAPTURE_A_FV_CNT		AP1302_REG_32BIT(0x00490040)
 #define AP1302_ADV_HINF_MIPI_T3			AP1302_REG_32BIT(0x840014)
@@ -436,6 +443,8 @@ static inline struct ap1302_sensor *to_ap1302_sensor(struct v4l2_subdev *sd)
 
 struct ap1302_device {
 	struct device *dev;
+	struct spi_driver spidrv;
+	struct spi_device *spi_dev;
 	struct i2c_client *client;
 
 	struct gpio_desc *reset_gpio;
@@ -508,5 +517,15 @@ void remove_sysfs_attributes(struct ap1302_device *ap1302);
 
 int ap1302_ctrls_init(struct ap1302_device *ap1302);
 void ap1302_ctrls_cleanup(struct ap1302_device *ap1302);
+
+// SPI
+
+int ap1302_spi_init(struct ap1302_device *ap1302);
+int ap1302_spi_write(struct ap1302_device *ap1302, u32 reg, u32 val, int *err);
+int ap1302_spi_write_block(struct ap1302_device *ap1302, u32 addr, u8 *data, u32 len);
+int ap1302_spi_read(struct ap1302_device *ap1302, u32 reg, u32 *val);
+
+int ap1302_register_spi_driver(struct ap1302_device *ap1302);
+void ap1302_unregister_spi_driver(struct ap1302_device *ap1302);
 
 #endif

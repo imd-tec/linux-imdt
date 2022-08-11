@@ -37,6 +37,7 @@ Optional properties:
     the battery;
 - ti,ibatcomp-clamp-microvolt: integer, maximum charging voltage adjustment due
     to expected voltage drop on in-series resistor;
+- stat-gpios: GPIO line connected to the STAT output
 
 Example:
 
@@ -46,6 +47,8 @@ bq25890 {
 
 	interrupt-parent = <&gpio1>;
 	interrupts = <16 IRQ_TYPE_EDGE_FALLING>;
+
+	stat-gpios = <&gpio2 20 GPIO_ACTIVE_HIGH>;
 
 	ti,battery-regulation-voltage = <4200000>;
 	ti,charge-current = <1000000>;
