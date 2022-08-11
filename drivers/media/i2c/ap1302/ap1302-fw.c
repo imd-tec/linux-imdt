@@ -14,6 +14,7 @@
 #include <linux/delay.h>
 #include <linux/firmware.h>
 #include <linux/regmap.h>
+#include <linux/ktime.h>
 
 static int ap1302_set_mipi_t3_clk(struct ap1302_device *ap1302)
 {
@@ -122,8 +123,13 @@ static int ap1302_write_fw_window(struct ap1302_device *ap1302, const u8 *buf,
 
 		dev_dbg(ap1302->dev, "%u bytes remaining", len);
 
-		ret = regmap_raw_write(ap1302->regmap16, write_addr, buf,
-				       write_size);
+		if (ap1302->spi_dev) {
+			ret = ap1302_spi_write_block(ap1302, write_addr, buf,
+							write_size);
+		} else {
+			ret = regmap_raw_write(ap1302->regmap16, write_addr,
+						buf, write_size);
+		}
 
 		if (ret) {
 			dev_err(ap1302->dev, "ret = %d", ret);
@@ -151,8 +157,11 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 	unsigned int win_pos = 0;
 	unsigned int crc;
 	int ret;
+	u64 start_time, stop_time, elapsed_time;
 
 	dev_info(ap1302->dev, "Loading firmware");
+
+	start_time = ktime_get_ns();
 
 	fw_hdr = (const struct ap1302_firmware_header *)ap1302->fw->data;
 	fw_data = (u8 *)&fw_hdr[1];
@@ -190,7 +199,12 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 	if (ret)
 		return ret;
 
-	dev_info(ap1302->dev, "Finished loading firmware");
+	stop_time = ktime_get_ns();
+
+	elapsed_time = (stop_time - start_time) / 1000000;
+
+	dev_info(ap1302->dev, "Finished loading firmware; took %llu ms",
+			elapsed_time);
 
 	if (crc != fw_hdr->crc) {
 		dev_warn(ap1302->dev,
@@ -217,5 +231,3 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 	/* Adjust MIPI TCLK timings */
 	return ap1302_set_mipi_t3_clk(ap1302);
 }
-
-

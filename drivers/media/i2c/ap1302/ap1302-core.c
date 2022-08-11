@@ -25,7 +25,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
 
-#define MAX_FW_LOAD_RETRIES 3
+#define MAX_FW_LOAD_RETRIES 5
 
 /**
  * @note YUYV8_1X16 is the only fully supported format, and is used for video
@@ -1305,13 +1305,21 @@ static int ap1302_detect_chip(struct ap1302_device *ap1302)
 	unsigned int revision;
 	int ret;
 
-	ret = ap1302_read(ap1302, AP1302_CHIP_VERSION, &version);
-	if (ret)
-		return ret;
+	ret = ap1302_spi_read(ap1302, AP1302_CHIP_VERSION, &version);
 
-	ret = ap1302_read(ap1302, AP1302_CHIP_REV, &revision);
-	if (ret)
-		return ret;
+	if (ret >= 0) {
+		ret = ap1302_spi_read(ap1302, AP1302_CHIP_REV, &revision);
+		if (ret)
+			return ret;
+	} else {
+		ret = ap1302_read(ap1302, AP1302_CHIP_VERSION, &version);
+		if (ret)
+			return ret;
+
+		ret = ap1302_read(ap1302, AP1302_CHIP_REV, &revision);
+		if (ret)
+			return ret;
+	}
 
 	if (version != AP1302_CHIP_ID) {
 		dev_err(ap1302->dev,
@@ -1361,6 +1369,10 @@ static int ap1302_hw_init(struct ap1302_device *ap1302)
 			if (ret < 0)
 				goto error_firmware;
 		}
+
+		ret = ap1302_spi_init(ap1302);
+		if (ret)
+			goto error_power;
 
 		ret = ap1302_detect_chip(ap1302);
 		if (ret)
@@ -1634,9 +1646,15 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 		goto error;
 	}
 
+	ret = ap1302_register_spi_driver(ap1302);
+	if (ret) {
+		dev_err(ap1302->dev, "failed to register SPI driver");
+		goto error;
+	}
+
 	ret = ap1302_parse_of(ap1302);
 	if (ret < 0)
-		goto error;
+		goto error_spi_cleanup;
 
 	for (i = 0; i < ARRAY_SIZE(ap1302->sensors); ++i) {
 		struct ap1302_sensor *sensor = &ap1302->sensors[i];
@@ -1646,12 +1664,12 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 		ret = ap1302_sensor_init(sensor, i);
 		if (ret < 0)
-			goto error;
+			goto error_spi_cleanup;
 	}
 
 	ret = ap1302_hw_init(ap1302);
 	if (ret)
-		goto error;
+		goto error_spi_cleanup;
 
 	ap1302_debugfs_init(ap1302);
 
@@ -1678,6 +1696,8 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 error_hw_cleanup:
 	ap1302_hw_cleanup(ap1302);
+error_spi_cleanup:
+	ap1302_unregister_spi_driver(ap1302);
 error:
 	ap1302_cleanup(ap1302);
 	return ret;
@@ -1697,6 +1717,8 @@ static int ap1302_remove(struct i2c_client *client)
 
 	v4l2_async_unregister_subdev(&ap1302->sd);
 	media_entity_cleanup(&ap1302->sd.entity);
+
+	ap1302_unregister_spi_driver(ap1302);
 
 	ap1302_ctrls_cleanup(ap1302);
 
