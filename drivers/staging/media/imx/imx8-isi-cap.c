@@ -988,10 +988,9 @@ static int mxc_isi_source_fmt_init(struct mxc_isi_cap_dev *isi_cap)
 	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 
 	if (source_format) {
-		dev_info(&isi_cap->pdev->dev,
-				"%s: using custom source format (0x%x)\n",
-				__func__,
-				source_format);
+		dev_dbg(&isi_cap->pdev->dev,
+			"%s: using custom source format (0x%x)\n", __func__,
+			source_format);
 
 		/* Use the user's selection to set the source format */
 		src_fmt.format.code = source_format;

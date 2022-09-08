@@ -378,13 +378,13 @@ void mxc_isi_channel_set_csc(struct mxc_isi_dev *mxc_isi,
 		val |= (CHNL_IMG_CTRL_CSC_MODE_RGB2YCBCR << CHNL_IMG_CTRL_CSC_MODE_OFFSET);
 	} else {
 		/* Bypass CSC */
-		dev_info(&mxc_isi->pdev->dev, "%s: bypass csc\n", __func__);
+		dev_dbg(&mxc_isi->pdev->dev, "%s: bypass csc\n", __func__);
 		mxc_isi->cscen = 0;
 		val |= CHNL_IMG_CTRL_CSC_BYPASS_ENABLE;
 	}
 
-	dev_info(&mxc_isi->pdev->dev, "%s: input format is %s", __func__, (char *)&src_fmt->fourcc);
-	dev_info(&mxc_isi->pdev->dev, "%s: output format is %s", __func__, (char *)&dst_fmt->fourcc);
+	dev_dbg(&mxc_isi->pdev->dev, "%s: input format is %s", __func__, (char *)&src_fmt->fourcc);
+	dev_dbg(&mxc_isi->pdev->dev, "%s: output format is %s", __func__, (char *)&dst_fmt->fourcc);
 
 	if (mxc_isi->cscen) {
 		writel(coeffs[csc][0], mxc_isi->regs + CHNL_CSC_COEFF0);
@@ -679,7 +679,7 @@ void mxc_isi_channel_config(struct mxc_isi_dev *mxc_isi,
 
 	/*  Bypass channel */
 	if (!mxc_isi->cscen && !mxc_isi->scale) {
-		dev_info(&mxc_isi->pdev->dev, "%s: bypassing channel\n", __func__);
+		dev_dbg(&mxc_isi->pdev->dev, "%s: bypassing channel\n", __func__);
 		val |= (CHNL_CTRL_CHNL_BYPASS_ENABLE << CHNL_CTRL_CHNL_BYPASS_OFFSET);
 	}
 

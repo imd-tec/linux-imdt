@@ -404,7 +404,8 @@ static int ap1302_configure(struct ap1302_device *ap1302)
 
 int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 {
-	int ret = 0;
+	int i, ret = 0;
+	u32 sys_start = 0;
 
 	dev_dbg(ap1302->dev, "stream %s", stall ? "stopped" : "started");
 
@@ -419,11 +420,24 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 		if (ret < 0)
 			return ret;
 
-		msleep(200);
+		for (i = 0; i < 500; i++) {
+
+			ap1302_read(ap1302, AP1302_SYS_START, &sys_start);
+
+			if (sys_start & AP1302_SYS_START_STALL_STATUS) {
+				dev_dbg(ap1302->dev, "%s i = %d %x %x",
+					__func__, i, sys_start,
+					sys_start & AP1302_SYS_START_STALL_STATUS);
+				break;
+			}
+
+			msleep(1);
+		}
 
 		ap1302_write(ap1302, AP1302_ADV_IRQ_SYS_INTE,
 			     AP1302_ADV_IRQ_SYS_INTE_SIPM |
 			     AP1302_ADV_IRQ_SYS_INTE_SIPS_FIFO_WRITE, &ret);
+
 		if (ret < 0)
 			return ret;
 
@@ -431,11 +445,27 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 		return 0;
 	} else {
 		ap1302->streaming = true;
-		return ap1302_write(ap1302, AP1302_SYS_START,
-				    AP1302_SYS_START_PLL_LOCK |
-				    AP1302_SYS_START_STALL_STATUS |
-				    AP1302_SYS_START_STALL_EN |
-				    AP1302_SYS_START_STALL_MODE_DISABLED, NULL);
+		ret = ap1302_write(ap1302, AP1302_SYS_START,
+				   AP1302_SYS_START_PLL_LOCK |
+				   AP1302_SYS_START_STALL_STATUS |
+				   AP1302_SYS_START_STALL_EN |
+				   AP1302_SYS_START_STALL_MODE_DISABLED, NULL);
+
+		for (i = 0; i < 500; i++) {
+
+			ap1302_read(ap1302, AP1302_SYS_START, &sys_start);
+
+			if (0 == (sys_start & AP1302_SYS_START_STALL_STATUS)) {
+				dev_dbg(ap1302->dev, "%s i = %d %x %x",
+					__func__, i, sys_start,
+					sys_start & AP1302_SYS_START_STALL_STATUS);
+				break;
+			}
+
+			msleep(1);
+		}
+
+		return ret;
 	}
 }
 
