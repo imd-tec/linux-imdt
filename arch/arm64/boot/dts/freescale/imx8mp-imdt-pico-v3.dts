@@ -568,6 +568,13 @@
 
 &iomuxc {
 	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24		0x06
+		>;
+	};
 
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
