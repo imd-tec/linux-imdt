@@ -155,7 +155,7 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 	unsigned int fw_size;
 	const u8 *fw_data;
 	unsigned int win_pos = 0;
-	unsigned int crc;
+	unsigned int crc = 0;
 	int ret;
 	u64 start_time, stop_time, elapsed_time;
 
@@ -195,16 +195,32 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 
 	msleep(1);
 
-	ret = ap1302_read(ap1302, AP1302_SIP_CRC, &crc);
-	if (ret)
-		return ret;
-
 	stop_time = ktime_get_ns();
 
 	elapsed_time = (stop_time - start_time) / 1000000;
 
 	dev_info(ap1302->dev, "Finished loading firmware; took %llu ms",
 			elapsed_time);
+
+	/*
+	 * Write 0xffff to the bootdata_stage register to indicate to the
+	 * AP1302 that the whole bootdata content has been loaded.
+	 */
+	ret = ap1302_write(ap1302, AP1302_BOOTDATA_STAGE, 0xffff, NULL);
+	if (ret)
+		return ret;
+
+	/* Wait for the BOOTDATA_CHECKSUM register to be non-zero */
+
+	while (0 == crc) {
+		ret = ap1302_read(ap1302, AP1302_BOOTDATA_CHECKSUM, &crc);
+		if (ret)
+			return ret;
+
+		msleep(10);
+	}
+
+	/* Check the CRC against the expected value */
 
 	if (crc != fw_hdr->crc) {
 		dev_warn(ap1302->dev,
@@ -214,14 +230,6 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 	}
 
 	dev_info(ap1302->dev, "CRC matches expected value (0x%04x)", crc);
-
-	/*
-	 * Write 0xffff to the bootdata_stage register to indicate to the
-	 * AP1302 that the whole bootdata content has been loaded.
-	 */
-	ret = ap1302_write(ap1302, AP1302_BOOTDATA_STAGE, 0xffff, NULL);
-	if (ret)
-		return ret;
 
 	/* The AP1302 starts outputting frames right after boot, stop it. */
 	ret = ap1302_stall(ap1302, true);
