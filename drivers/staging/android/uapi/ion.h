@@ -48,6 +48,11 @@ enum ion_heap_type {
  */
 #define ION_FLAG_CACHED 1
 
+/*
+ * Do not zero pages. This presents a security risk but will speed up allocation.
+ */
+#define ION_FLAG_NO_ZERO 2
+
 /**
  * DOC: Ion Userspace API
  *

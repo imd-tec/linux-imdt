@@ -58,7 +58,10 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 		while (nr_clear_pages > 0) {
 			void *vaddr = kmap_atomic(page);
 
-			memset(vaddr, 0, PAGE_SIZE);
+			if (!(flags & ION_FLAG_NO_ZERO)) {
+				memset(vaddr, 0, size);
+			}
+
 #ifdef CONFIG_ARM
 			__cpuc_flush_dcache_area(vaddr,PAGE_SIZE);
 #else
@@ -73,7 +76,11 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 #endif
 	} else {
 		void *ptr = page_address(pages);
-		memset(ptr, 0, size);
+
+		if (!(flags & ION_FLAG_NO_ZERO)) {
+			memset(ptr, 0, size);
+		}
+
 #ifdef CONFIG_ARM
 		__cpuc_flush_dcache_area(ptr,size);
 		outer_flush_range(__pa(ptr), __pa(ptr) + size);
