@@ -572,6 +572,7 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106
 			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24		0x06
 		>;
 	};
@@ -670,7 +671,7 @@
 
 	pinctrl_imu: imuirq {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00		0x1c4
+			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00		0x4
 		>;
 	};
 
