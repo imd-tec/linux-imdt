@@ -149,6 +149,85 @@ static const u16 ap1302_flicker_values[] = {
 	AP1302_FLICK_CTRL_MODE_AUTO,
 };
 
+static int ap1302_set_test_pattern(struct ap1302_device *ap1302, s32 val)
+{
+	int ret;
+	u32 reg = 0;
+	u32 read_reg;
+	u32 const default_tp_mode = 2;
+
+	/* At the time of writing the ap1302 firmware set AP1302_SENSOR_SELECT
+	 * to 0x0211. ie
+	 * 	TP_MODE 2
+	 * 	SENSOR (1) (primary sensor)
+	 * 	SINF (1) MIPI
+	 * 	PATTERN_ON (0)
+	 * Minimise write backs by setting TP_MODE to default_tp_mode if the
+	 * test pattern is off.
+	 * 
+	 * Preserve SENSOR as best we can. However, at the time of writing,
+	 * switching an enabled test patterm off will not restore the original
+	 * setting and SENSOR is set to (1) primary sensor.
+	 */
+	ret = ap1302_read(ap1302, AP1302_SENSOR_SELECT, &reg);
+	
+	if (ret) {
+		return ret;
+	}
+
+	read_reg = reg;
+
+	if (val == 0) {
+		/* TP is OFF */
+		reg = reg & (~AP1302_SENSOR_SELECT_PATTERN_ON);
+
+		/* SENSOR needs to be something other than zero (TP) */
+		if (0 == (reg & AP1302_SENSOR_SELECT_SENSOR_MASK)) {
+			/* This cannot be zero. Set to primary sensor. */
+
+			/* TODO:
+			 * This does not support a secondary sensor. Switching
+			 * on TP and then switching it OFF only works for 
+			 * primary sensor.
+			 */
+			reg |= AP1302_SENSOR_SELECT_SENSOR(0);
+		}
+
+		/* Set the TP_MODE to default_tp_mode.
+		 * No TP is produced as AP1302_SENSOR_SELECT_PATTERN_ON is not
+		 * set. Using the default may save us an unnessasery write back.
+		 */
+
+		/* Clear TP_MODE */
+		reg &= (~(AP1302_SENSOR_TP_MODE_MASK));
+
+		/* Set TP_MODE to the default (default_tp_mode) */
+		reg |= AP1302_SENSOR_SELECT_TP_MODE(default_tp_mode);
+	} else {
+		/* TP on */
+
+		/* Set bit AP1302_SENSOR_SELECT_PATTERN_ON */
+		reg |= AP1302_SENSOR_SELECT_PATTERN_ON;
+
+		/* Clear SENSOR field to 0 (TP) */
+		reg &= (~AP1302_SENSOR_SELECT_SENSOR_MASK);
+
+		/* Clear TP_MODE field */
+		reg &= (~(AP1302_SENSOR_TP_MODE_MASK));
+
+		/* Set TP_MODE field to the requested TP */
+		reg |= AP1302_SENSOR_SELECT_TP_MODE(val);
+	}
+
+	/* Only write back if different to read value. */
+	if (reg != read_reg) {
+		ret = ap1302_write(ap1302, AP1302_SENSOR_SELECT, reg, NULL);
+		return ret;
+	} else {
+		return 0;
+	}
+}
+
 static int ap1302_set_flicker_freq(struct ap1302_device *ap1302, s32 val)
 {
 	return ap1302_write(ap1302, AP1302_FLICK_CTRL,
@@ -196,6 +275,9 @@ static int ap1302_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	case V4L2_CID_POWER_LINE_FREQUENCY:
 		return ap1302_set_flicker_freq(ap1302, ctrl->val);
+
+	case V4L2_CID_TEST_PATTERN:
+		return ap1302_set_test_pattern(ap1302, ctrl->val);
 
 	default:
 		pr_info("ap1302: s_ctrl invalid\n");
@@ -290,7 +372,8 @@ static const struct v4l2_ctrl_config ap1302_ctrls[] = {
 		.min = 0,
 		.max = 15,
 		.def = 0,
-		.menu_skip_mask = BIT(15) | BIT(12) | BIT(11) | BIT(10) | BIT(9),
+		.menu_skip_mask =
+			BIT(15) | BIT(12) | BIT(11) | BIT(10) | BIT(9),
 	}, {
 		.ops = &ap1302_ctrl_ops,
 		.id = V4L2_CID_SCENE_MODE,
@@ -307,6 +390,23 @@ static const struct v4l2_ctrl_config ap1302_ctrls[] = {
 	},
 };
 
+static const char *const test_pattern_menu[] = {
+	"Normal Operation",
+	"flat color",
+	"pseudo random (noise)",
+	"100% color bars",
+	"fade to grey bars",
+	"PRBS1",
+	"PRBS2",
+	"PRBS3",
+	"PRBS4",
+	"vertical stripes",
+	"vertical ramp",
+	"walking 1's (10bit)",
+	"walking 1's (8bit)",
+	"black and white"
+};
+
 int ap1302_ctrls_init(struct ap1302_device *ap1302)
 {
 	unsigned int i;
@@ -318,6 +418,12 @@ int ap1302_ctrls_init(struct ap1302_device *ap1302)
 
 	for (i = 0; i < ARRAY_SIZE(ap1302_ctrls); i++)
 		v4l2_ctrl_new_custom(&ap1302->ctrls, &ap1302_ctrls[i], NULL);
+
+
+	v4l2_ctrl_new_std_menu_items(&ap1302->ctrls, &ap1302_ctrl_ops,
+				     V4L2_CID_TEST_PATTERN,
+				     ARRAY_SIZE(test_pattern_menu) - 1,
+				     0, 0, test_pattern_menu);
 
 	if (ap1302->ctrls.error) {
 		ret = ap1302->ctrls.error;

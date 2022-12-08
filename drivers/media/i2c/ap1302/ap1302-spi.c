@@ -106,12 +106,11 @@ done:
 	return ret;
 }
 
-int ap1302_spi_write_block(struct ap1302_device *ap1302, u32 addr, u8 *data, u32 len)
+int ap1302_spi_write_block(struct ap1302_device *ap1302, u32 addr, const u8 *data, u32 len)
 {
 	struct spi_device *spi_dev = ap1302->spi_dev;
 	int ret;
 
-	struct spi_message msg;
 	struct spi_transfer xfers[2];
 	u8 tx_data[3];
 

@@ -5,7 +5,7 @@
  * Copyright (C) 2021, Witekio, Inc.
  * Copyright (C) 2021, Xilinx, Inc.
  * Copyright (C) 2021, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
- * Copyright (C) 2021, IMD Technologies Ltd
+ * Copyright (C) 2021-2022, IMD Technologies Ltd
  *
  */
 
@@ -50,9 +50,7 @@ int ap1302_request_firmware(struct ap1302_device *ap1302)
 		"_dual",
 	};
 
-	const struct ap1302_firmware_header *fw_hdr;
 	unsigned int num_sensors;
-	unsigned int fw_size;
 	unsigned int i;
 	char name[64];
 	int ret;
@@ -75,21 +73,6 @@ int ap1302_request_firmware(struct ap1302_device *ap1302)
 	if (ret) {
 		dev_err(ap1302->dev, "Failed to request firmware: %d\n", ret);
 		return ret;
-	}
-
-	/*
-	 * The firmware binary contains a header defined by the
-	 * ap1302_firmware_header structure. The firmware itself (also referred
-	 * to as bootdata) follows the header. Perform sanity checks to ensure
-	 * the firmware is valid.
-	 */
-	fw_hdr = (const struct ap1302_firmware_header *)ap1302->fw->data;
-	fw_size = ap1302->fw->size - sizeof(*fw_hdr);
-
-	if (fw_hdr->pll_init_size > fw_size) {
-		dev_err(ap1302->dev,
-			"Invalid firmware: PLL init size too large\n");
-		return -EINVAL;
 	}
 
 	return 0;
@@ -143,7 +126,7 @@ static int ap1302_write_fw_window(struct ap1302_device *ap1302, const u8 *buf,
 		if (*win_pos >= AP1302_FW_WINDOW_SIZE)
 			*win_pos = 0;
 
-		msleep(10);
+		usleep_range(10000, 11000);
 	}
 
 	return 0;
@@ -151,49 +134,35 @@ static int ap1302_write_fw_window(struct ap1302_device *ap1302, const u8 *buf,
 
 int ap1302_load_firmware(struct ap1302_device *ap1302)
 {
-	const struct ap1302_firmware_header *fw_hdr;
-	unsigned int fw_size;
-	const u8 *fw_data;
 	unsigned int win_pos = 0;
-	unsigned int crc = 0;
 	int ret;
+	u32 bootdata_stage = 0;
+	u32 checksum = 0;
 	u64 start_time, stop_time, elapsed_time;
+	int retries;
 
 	dev_info(ap1302->dev, "Loading firmware");
 
 	start_time = ktime_get_ns();
 
-	fw_hdr = (const struct ap1302_firmware_header *)ap1302->fw->data;
-	fw_data = (u8 *)&fw_hdr[1];
-	fw_size = ap1302->fw->size - sizeof(*fw_hdr);
-
-	/* Clear the CRC register. */
-	ret = ap1302_write(ap1302, AP1302_SIP_CRC, 0xffff, NULL);
+	ret = ap1302_write(ap1302, AP1302_SIPS_SLEW_CTRL, 0x14, NULL);
 	if (ret)
 		return ret;
 
-	/*
-	 * Load the PLL initialization settings, set the bootdata stage to 2 to
-	 * apply the basic_init_hp settings, and wait 1ms for the PLL to lock.
-	 */
-	ret = ap1302_write_fw_window(ap1302, fw_data, fw_hdr->pll_init_size,
-				     &win_pos);
+	ret = ap1302_write(ap1302, AP1302_SYSTEM_FREQ_IN,
+			   ap1302->system_freq_in, NULL);
 	if (ret)
 		return ret;
 
-	ret = ap1302_write(ap1302, AP1302_BOOTDATA_STAGE, 0x0002, NULL);
+	ret = ap1302_write(ap1302, AP1302_HINF_MIPI_FREQ_TGT,
+			   ap1302->hinf_mipi_freq_tgt, NULL);
 	if (ret)
 		return ret;
 
-	usleep_range(1200, 2000);
-
-	/* Load the rest of the bootdata content and verify the CRC. */
-	ret = ap1302_write_fw_window(ap1302, fw_data + fw_hdr->pll_init_size,
-				     fw_size - fw_hdr->pll_init_size, &win_pos);
+	ret = ap1302_write_fw_window(ap1302, ap1302->fw->data, ap1302->fw->size,
+	                             &win_pos);
 	if (ret)
 		return ret;
-
-	msleep(1);
 
 	stop_time = ktime_get_ns();
 
@@ -203,33 +172,40 @@ int ap1302_load_firmware(struct ap1302_device *ap1302)
 			elapsed_time);
 
 	/*
-	 * Write 0xffff to the bootdata_stage register to indicate to the
+	 * Write 0xffff to the BOOTDATA_STAGE register to indicate to the
 	 * AP1302 that the whole bootdata content has been loaded.
 	 */
 	ret = ap1302_write(ap1302, AP1302_BOOTDATA_STAGE, 0xffff, NULL);
 	if (ret)
 		return ret;
 
-	/* Wait for the BOOTDATA_CHECKSUM register to be non-zero */
-
-	while (0 == crc) {
-		ret = ap1302_read(ap1302, AP1302_BOOTDATA_CHECKSUM, &crc);
+	/* Wait for the AP1302_BOOTDATA_STAGE register to read 0xFFFF */
+	retries = 500;
+	bootdata_stage = 0;
+	while (retries && (0xFFFF != bootdata_stage)) {
+		ret = ap1302_read(ap1302, AP1302_BOOTDATA_STAGE,
+		                  &bootdata_stage);
 		if (ret)
 			return ret;
 
-		msleep(10);
+		usleep_range(10000, 11000);
+		retries--;
 	}
 
-	/* Check the CRC against the expected value */
+	checksum = 0;
+	while (retries && (0xFFFF != checksum)) {
+		ret = ap1302_read(ap1302, AP1302_BOOTDATA_CHECKSUM, &checksum);
+		if (ret)
+			return ret;
 
-	if (crc != fw_hdr->crc) {
-		dev_warn(ap1302->dev,
-			 "CRC mismatch: expected 0x%04x, got 0x%04x\n",
-			 fw_hdr->crc, crc);
-		return -EAGAIN;
+		usleep_range(10000, 11000);
+		retries--;
 	}
 
-	dev_info(ap1302->dev, "CRC matches expected value (0x%04x)", crc);
+	dev_info(ap1302->dev, "CRC matches expected value");
+
+	if (0 == retries)
+		return -EBUSY;
 
 	/* The AP1302 starts outputting frames right after boot, stop it. */
 	ret = ap1302_stall(ap1302, true);
