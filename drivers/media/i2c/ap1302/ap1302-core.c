@@ -60,6 +60,14 @@ static bool retry_firmware;
 module_param(retry_firmware, bool, 0644);
 MODULE_PARM_DESC(retry_firmware, "If set, only a single AP1302 ISP is present");
 
+static unsigned int system_freq_in_hz = 24000000;
+module_param(system_freq_in_hz, uint, 0644);
+MODULE_PARM_DESC(system_freq_in_hz, "Ref clock for AP1302 in Hz.");
+
+static unsigned int hinf_mipi_freq_tgt_hz = 1104000000;
+module_param(hinf_mipi_freq_tgt_hz, uint, 0644);
+MODULE_PARM_DESC(hinf_mipi_freq_tgt_hz, "MIPI clock for AP1302 in Hz.");
+
 /*
  *
  * Sensor Info
@@ -387,6 +395,9 @@ static int ap1302_configure(struct ap1302_device *ap1302)
 	unsigned int data_lanes = ap1302->bus_cfg.bus.mipi_csi2.num_data_lanes;
 	int ret = 0;
 
+	ap1302_write(ap1302, AP1302_SYS_START,
+		     AP1302_SYS_START_STALL_MODE_DISABLED, &ret);
+
 	ap1302_write(ap1302, AP1302_PREVIEW_HINF_CTRL,
 		     AP1302_PREVIEW_HINF_CTRL_SPOOF |
 		     AP1302_PREVIEW_HINF_CTRL_MIPI_LANES(data_lanes), &ret);
@@ -411,10 +422,6 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 
 	if (stall) {
 		ap1302_write(ap1302, AP1302_SYS_START,
-			     AP1302_SYS_START_PLL_LOCK |
-			     AP1302_SYS_START_STALL_MODE_DISABLED, &ret);
-		ap1302_write(ap1302, AP1302_SYS_START,
-			     AP1302_SYS_START_PLL_LOCK |
 			     AP1302_SYS_START_STALL_EN |
 			     AP1302_SYS_START_STALL_MODE_DISABLED, &ret);
 		if (ret < 0)
@@ -431,12 +438,8 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 				break;
 			}
 
-			msleep(1);
+			usleep_range(1000, 1500);
 		}
-
-		ap1302_write(ap1302, AP1302_ADV_IRQ_SYS_INTE,
-			     AP1302_ADV_IRQ_SYS_INTE_SIPM |
-			     AP1302_ADV_IRQ_SYS_INTE_SIPS_FIFO_WRITE, &ret);
 
 		if (ret < 0)
 			return ret;
@@ -446,7 +449,6 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 	} else {
 		ap1302->streaming = true;
 		ret = ap1302_write(ap1302, AP1302_SYS_START,
-				   AP1302_SYS_START_PLL_LOCK |
 				   AP1302_SYS_START_STALL_STATUS |
 				   AP1302_SYS_START_STALL_EN |
 				   AP1302_SYS_START_STALL_MODE_DISABLED, NULL);
@@ -462,7 +464,7 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 				break;
 			}
 
-			msleep(1);
+			usleep_range(1000, 1500);
 		}
 
 		return ret;
@@ -1644,6 +1646,7 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 	unsigned int i;
 	int ret;
 	u32 val;
+	u64 freq;
 
 	ap1302 = devm_kzalloc(&client->dev, sizeof(*ap1302), GFP_KERNEL);
 	if (!ap1302)
@@ -1657,6 +1660,12 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 	} else {
 		dev_info(ap1302->dev, "Firmware retries disabled");
 	}
+
+	freq = (u64)hinf_mipi_freq_tgt_hz;
+	ap1302->hinf_mipi_freq_tgt = (u32)((freq * 0x10000UL)/1000000UL);
+
+	freq = (u64)system_freq_in_hz;
+	ap1302->system_freq_in = (u32)((freq * 0x10000UL)/1000000UL);
 
 	mutex_init(&ap1302->lock);
 

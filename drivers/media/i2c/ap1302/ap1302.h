@@ -152,10 +152,10 @@
 #define AP1302_PREVIEW_OUT_FMT_FST_RAW_CURVE	(9U << 0)
 #define AP1302_PREVIEW_OUT_FMT_FST_RAW_CCONV	(10U << 0)
 #define AP1302_PREVIEW_SENSOR_MODE		AP1302_REG_16BIT(0x2014)
+#define AP1302_PREVIEW_LINE_TIME		AP1302_REG_32BIT(0x201C)
 #define AP1302_PREVIEW_MAX_FPS			AP1302_REG_16BIT(0x2020)
 #define AP1302_PREVIEW_AE_UPPER_ET		AP1302_REG_32BIT(0x2024)
 #define AP1302_PREVIEW_AE_MAX_ET		AP1302_REG_32BIT(0x2028)
-#define AP1302_PREVIEW_S1_SENSOR_MODE		AP1302_REG_16BIT(0x202e)
 #define AP1302_PREVIEW_HINF_CTRL		AP1302_REG_16BIT(0x2030)
 #define AP1302_PREVIEW_HINF_CTRL_BT656_LE	BIT(15)
 #define AP1302_PREVIEW_HINF_CTRL_BT656_16BIT	BIT(14)
@@ -168,22 +168,22 @@
 #define AP1302_PREVIEW_HINF_CTRL_MIPI_LANES(n)	((n) << 0)
 
 /* IQ Registers */
-#define AP1302_AE_CTRL			AP1302_REG_16BIT(0x5002)
+#define AP1302_AE_CTRL				AP1302_REG_16BIT(0x5002)
 #define AP1302_AE_CTRL_STATS_SEL		BIT(11)
-#define AP1302_AE_CTRL_IMM				BIT(10)
+#define AP1302_AE_CTRL_IMM			BIT(10)
 #define AP1302_AE_CTRL_ROUND_ISO		BIT(9)
 #define AP1302_AE_CTRL_UROI_FACE		BIT(7)
 #define AP1302_AE_CTRL_UROI_LOCK		BIT(6)
 #define AP1302_AE_CTRL_UROI_BOUND		BIT(5)
-#define AP1302_AE_CTRL_IMM1				BIT(4)
+#define AP1302_AE_CTRL_IMM1			BIT(4)
 #define AP1302_AE_CTRL_MANUAL_EXP_TIME_GAIN	(0U << 0)
 #define AP1302_AE_CTRL_MANUAL_BV_EXP_TIME	(1U << 0)
 #define AP1302_AE_CTRL_MANUAL_BV_GAIN		(2U << 0)
 #define AP1302_AE_CTRL_MANUAL_BV_ISO		(3U << 0)
 #define AP1302_AE_CTRL_AUTO_BV_EXP_TIME		(9U << 0)
-#define AP1302_AE_CTRL_AUTO_BV_GAIN			(10U << 0)
-#define AP1302_AE_CTRL_AUTO_BV_ISO			(11U << 0)
-#define AP1302_AE_CTRL_FULL_AUTO			(12U << 0)
+#define AP1302_AE_CTRL_AUTO_BV_GAIN		(10U << 0)
+#define AP1302_AE_CTRL_AUTO_BV_ISO		(11U << 0)
+#define AP1302_AE_CTRL_FULL_AUTO		(12U << 0)
 #define AP1302_AE_CTRL_MODE_MASK		0x000f
 #define AP1302_AE_MANUAL_GAIN		AP1302_REG_16BIT(0x5006)
 #define AP1302_AE_BV_OFF			AP1302_REG_16BIT(0x5014)
@@ -252,18 +252,20 @@
 #define AP1302_SENSOR_SELECT_YUV		BIT(2)
 #define AP1302_SENSOR_SELECT_SENSOR_TP		(0U << 0)
 #define AP1302_SENSOR_SELECT_SENSOR(n)		(((n) + 1) << 0)
+
+#define AP1302_SENSOR_TP_MODE_MASK		AP1302_SENSOR_SELECT_TP_MODE(0xF)
+#define AP1302_SENSOR_SELECT_SENSOR_MASK        (0x3 << 0)
+
 #define AP1302_SYS_START			AP1302_REG_16BIT(0x601a)
-#define AP1302_SYS_START_PLL_LOCK		BIT(15)
 #define AP1302_SYS_START_LOAD_OTP		BIT(12)
-#define AP1302_SYS_START_RESTART_ERROR		BIT(11)
 #define AP1302_SYS_START_STALL_STATUS		BIT(9)
 #define AP1302_SYS_START_STALL_EN		BIT(8)
 #define AP1302_SYS_START_STALL_MODE_FRAME	(0U << 6)
 #define AP1302_SYS_START_STALL_MODE_DISABLED	(1U << 6)
 #define AP1302_SYS_START_STALL_MODE_POWER_DOWN	(2U << 6)
-#define AP1302_SYS_START_GO			BIT(4)
-#define AP1302_SYS_START_PATCH_FUN		BIT(1)
 #define AP1302_SYS_START_PLL_INIT		BIT(0)
+#define AP1302_SYSTEM_FREQ_IN			AP1302_REG_32BIT(0x6024)
+#define AP1302_HINF_MIPI_FREQ_TGT		AP1302_REG_32BIT(0x6034)
 #define AP1302_DMA_SRC				AP1302_REG_32BIT(0x60a0)
 #define AP1302_DMA_DST				AP1302_REG_32BIT(0x60a4)
 #define AP1302_DMA_SIP_SIPM(n)			((n) << 26)
@@ -305,6 +307,7 @@
 #define AP1302_REG_ADV_START			0xe000
 #define AP1302_ADVANCED_BASE			AP1302_REG_32BIT(0xf038)
 #define AP1302_SIP_CRC				AP1302_REG_16BIT(0xf052)
+#define AP1302_SIPS_SLEW_CTRL			AP1302_REG_16BIT(0xf05a)
 
 /* Advanced System Registers */
 #define AP1302_ADV_SYS_RST_EN_0			AP1302_REG_32BIT(0x00200014)
@@ -457,6 +460,9 @@ struct ap1302_device {
 	struct regmap *regmap32;
 	u32 reg_page;
 
+	u32 system_freq_in;
+	u32 hinf_mipi_freq_tgt;
+
 	const struct firmware *fw;
 
 	struct v4l2_fwnode_endpoint bus_cfg;
@@ -489,11 +495,6 @@ static inline struct ap1302_device *to_ap1302(struct v4l2_subdev *sd)
 	return container_of(sd, struct ap1302_device, sd);
 }
 
-struct ap1302_firmware_header {
-	u16 pll_init_size;
-	u16 crc;
-} __packed;
-
 // Core
 
 int ap1302_read(struct ap1302_device *ap1302, u32 reg, u32 *val);
@@ -524,7 +525,7 @@ void ap1302_ctrls_cleanup(struct ap1302_device *ap1302);
 
 int ap1302_spi_init(struct ap1302_device *ap1302);
 int ap1302_spi_write(struct ap1302_device *ap1302, u32 reg, u32 val, int *err);
-int ap1302_spi_write_block(struct ap1302_device *ap1302, u32 addr, u8 *data, u32 len);
+int ap1302_spi_write_block(struct ap1302_device *ap1302, u32 addr, const u8 *data, u32 len);
 int ap1302_spi_read(struct ap1302_device *ap1302, u32 reg, u32 *val);
 
 int ap1302_register_spi_driver(struct ap1302_device *ap1302);

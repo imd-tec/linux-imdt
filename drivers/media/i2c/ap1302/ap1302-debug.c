@@ -274,7 +274,11 @@ static int ap1302_isp_data_get(void *arg, u64 *val)
 
 	addr = ap1302->debugfs.isp_addr;
 
-	ret = ap1302_read(ap1302, AP1302_REG_16BIT(addr), &value);
+	if (0 == AP1302_REG_SIZE(addr)) {
+		addr =  AP1302_REG_16BIT(addr);
+	}
+
+	ret = ap1302_read(ap1302, addr, &value);
 	if (!ret)
 		*val = value;
 
@@ -297,7 +301,11 @@ static int ap1302_isp_data_set(void *arg, u64 val)
 		goto unlock;
 	}
 
-	ret = ap1302_write(ap1302, AP1302_REG_16BIT(addr), val, NULL);
+	if (0 == AP1302_REG_SIZE(addr)) {
+		addr =  AP1302_REG_16BIT(addr);
+	}
+
+	ret = ap1302_write(ap1302, addr, val, NULL);
 
 unlock:
 	mutex_unlock(&ap1302->debugfs.lock);
@@ -408,9 +416,9 @@ DEFINE_DEBUGFS_ATTRIBUTE(ap1302_sipm_data_fops, ap1302_sipm_data_get,
  */
 
 DEFINE_DEBUGFS_ATTRIBUTE(ap1302_isp_addr_fops, ap1302_isp_addr_get,
-			 ap1302_isp_addr_set, "0x%04llx\n");
+			 ap1302_isp_addr_set, "0x%08llx\n");
 DEFINE_DEBUGFS_ATTRIBUTE(ap1302_isp_data_fops, ap1302_isp_data_get,
-			 ap1302_isp_data_set, "0x%04llx\n");
+			 ap1302_isp_data_set, "0x%08llx\n");
 
 /* The debugfs is to read and write mipi clk parameters tclk_post values */
 DEFINE_DEBUGFS_ATTRIBUTE(ap1302_mipi_tclk_post_fops, ap1302_mipi_tclk_post_get,
