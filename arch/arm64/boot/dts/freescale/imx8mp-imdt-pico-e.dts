@@ -498,7 +498,7 @@
 &uart1 {
 	/* Bluetooth */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1>, <&pinctrl_bluetooth>;
+	pinctrl-0 = <&pinctrl_uart1>;
 	assigned-clocks = <&clk IMX8MP_CLK_UART1>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
@@ -561,31 +561,19 @@
 };
 
 &usdhc1 {
-	/* Wi-Fi module */
+	pinctrl-assert-gpios = <&gpio1 16 GPIO_ACTIVE_HIGH>;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc1>, <&pinctrl_usdhc1_gpio>;
-	pinctrl-1 = <&pinctrl_usdhc1_100mhz>, <&pinctrl_usdhc1_gpio>;
-	pinctrl-2 = <&pinctrl_usdhc1_200mhz>, <&pinctrl_usdhc1_gpio>;
-	bus-width = <4>;
-	pm-ignore-notify;
+	pinctrl-0 = <&pinctrl_usdhc1>;
+	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	keep-power-in-suspend;
 	non-removable;
-	cap-power-off-card;
-	/delete-property/ vmmc-supply;
+	wakeup-source;
+	/*mmc-pwrseq = <&usdhc1_pwrseq>;*/
+	fsl,sdio-interrupt-enabled;
 	status = "okay";
-
-	brcmf: bcrmf@1 {
-		reg = <1>;
-		compatible = "brcm,bcm4329-fmac";
-
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_wlan_irq>;
-
-		interrupt-parent = <&gpio1>;
-		interrupts = <17 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "host-wake";
-	};
 };
+
 
 &usdhc2 {
 	/* Micro SD card */
@@ -633,7 +621,6 @@
 			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106 /* PER_PD_DIS:  Power for Peripherals domain. Should be low. */
 			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x106 /* M2_PD_EN: M.2 Power enable, (set high to enable 0x146). */
 			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24		0x06  /*m2e coex?*/
-
 		>;
 	};
 
@@ -908,19 +895,12 @@
 	};
 
 	// WL_REG_ON
-	pinctrl_usdhc1_gpio: usdhc3gpiogrp {
+	pinctrl_usdhc1_gpio: usdhc1gpiogrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_ENET_MDC__GPIO1_IO16	0x1c4
 		>;
 	};
 
-	// BT_REG_ON
-	pinctrl_bluetooth: bluetoothgrp {
-		fsl,pins = <
-			MX8MP_IOMUXC_ENET_RD1__GPIO1_IO27	0x1c4
-			MX8MP_IOMUXC_ENET_RD0__GPIO1_IO26	0x1c4
-		>;
-	};
 
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
