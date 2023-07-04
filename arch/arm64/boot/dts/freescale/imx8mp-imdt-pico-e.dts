@@ -134,7 +134,8 @@
 	pinctrl-0 = <&pinctrl_ecspi2 &pinctrl_ecspi2_cs>;
 	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>, <&gpio1 24 GPIO_ACTIVE_LOW>;
 	status = "okay";
-/*
+
+	/* IMU */
 	lsm6dsm {
 		compatible = "st,lsm6dsl";
 		reg = <0>;
@@ -142,9 +143,9 @@
 		spi-max-frequency = <10000000>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <0 IRQ_TYPE_EDGE_RISING>;
-		st,drdy-int-pin = <2>;
+		st,drdy-int-pin = <1>;
 	};
-*/
+
 
 	ap1302_spi {
 		compatible = "onnn,ap1302";
