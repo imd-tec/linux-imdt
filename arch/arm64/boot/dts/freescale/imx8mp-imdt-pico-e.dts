@@ -65,7 +65,7 @@
 		gpio = <&gpio2 19 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
-/*
+
 	
 	sound-hdmi {
 		compatible = "fsl,imx-audio-cdnhdmi";
@@ -87,7 +87,7 @@
 		model = "imx-audio-micfil";
 		cpu-dai = <&micfil>;
 	};
-*/
+
 };
 
 &A53_0 {
