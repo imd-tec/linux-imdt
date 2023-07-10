@@ -469,15 +469,53 @@
 };
 
 &pcie{
-	status = "disabled";
+	pinctrl-names = "default";
+	/* pinctrl-0 = <&pinctrl_pcie>; */
+
+	/* disable-gpio = <&pca6416_6_20 10 GPIO_ACTIVE_LOW>; */
+	reset-gpio = <&pca6416_6_21 11 GPIO_ACTIVE_LOW>;
+	ext_osc = <1>;
+	clocks = <&clk IMX8MP_CLK_HSIO_ROOT>,
+		 <&clk IMX8MP_CLK_PCIE_AUX>,
+		 <&clk IMX8MP_CLK_HSIO_AXI>,
+		 <&clk IMX8MP_CLK_PCIE_ROOT>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI>,
+			  <&clk IMX8MP_CLK_PCIE_AUX>;
+	assigned-clock-rates = <500000000>, <10000000>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
+				 <&clk IMX8MP_SYS_PLL2_50M>;
+	l1ss-disabled;
+	status = "okay";
+
+	wifi_wake_host {
+		compatible = "nxp,wifi-wake-host";
+		interrupt-parent = <&gpio5>;
+		interrupts = <21 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "host-wake";
+	};
 };
 
 &pcie_ep{
+	pinctrl-names = "default";
+	/* pinctrl-0 = <&pinctrl_pcie>; */
+	ext_osc = <1>;
+	clocks = <&clk IMX8MP_CLK_HSIO_ROOT>,
+		 <&clk IMX8MP_CLK_PCIE_AUX>,
+		 <&clk IMX8MP_CLK_HSIO_AXI>,
+		 <&clk IMX8MP_CLK_PCIE_ROOT>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI>,
+			  <&clk IMX8MP_CLK_PCIE_AUX>;
+	assigned-clock-rates = <500000000>, <10000000>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
+				 <&clk IMX8MP_SYS_PLL2_50M>;
 	status = "disabled";
 };
 
 &pcie_phy{
-	status = "disabled";
+	ext_osc = <1>;
+	status = "okay";
 };
 
 &sai2 {
@@ -619,8 +657,8 @@
 			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c3
 			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
 			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
-			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106 /* PER_PD_DIS:  Power for Peripherals domain. Should be low. */
-			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x106 /* M2_PD_EN: M.2 Power enable, (set high to enable 0x146). */
+			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106 /* PER_PD_DIS:  Power for Peripherals domain. Should be low (0x106). */
+			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x146 /* M2_PD_EN: M.2 Power enable, (set high to enable 0x146). */
 			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24		0x06  /*m2e coex?*/
 		>;
 	};
