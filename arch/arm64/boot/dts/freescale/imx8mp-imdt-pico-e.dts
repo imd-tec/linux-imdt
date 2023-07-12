@@ -393,12 +393,51 @@
 		reg = <0x20>;
 		gpio-controller;
 		#gpio-cells = <2>;
+
+		gpio-line-names =
+			"RGMII_CONN_GPIO0",
+			"RGMII_CONN_GPIO1",
+			"GBE_RSTn",
+			"GBE_nINT",
+			"TP657",
+			"RS232_DIS_3V3",
+			"RS232_INVALIDn",
+			"TP658",
+
+			"PCIe_SEL_3V3",
+			"D_AMP_FAULT",
+			"D_AMP_Mute3V3",
+			"HDMI_DISABLE",
+			"HDMI_FAULT",
+			"UART_SEL0",
+			"UART_SEL1",
+			"TP659";
 	};
+
 	pca6416_6_21: gpio@21 {
 		compatible = "nxp,pcal6416";
 		reg = <0x21>;
 		gpio-controller;
 		#gpio-cells = <2>;
+
+		gpio-line-names =
+			"M2B_CONFIG_0",
+			"M2B_CONFIG_1",
+			"M2B_CONFIG_2",
+			"M2B_CONFIG_3",
+			"M2B_CARD_ONOFFn",
+			"M2B_PCIeRST",
+			"M2B_PEWAKE_3V3n",
+			"M2B_W_DISABLE2n",
+			
+			"M2B_WAKE_UP",
+			"M2B_RSTn",
+			"M2B_DPR",
+			"M2B_FLIGHT_MODE",
+			"M2E_PEWAKE_3V3",
+			"M2E_PERST0",
+			"M2E_BT_ENn",
+			"M2E_WLAN_ENn";
 	};
 
 };
