@@ -65,6 +65,22 @@
 		gpio = <&gpio4 3 GPIO_ACTIVE_LOW>;
 	};
 
+	reg_3v3: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "REG_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	reg_1v8: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "REG_1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
 
 	reg_usdhc2_vmmc: regulator-usdhc2 {
 		compatible = "regulator-fixed";
@@ -76,7 +92,13 @@
 		gpio = <&gpio2 19 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
-
+/*
+	amp: analog-amplifier {
+		compatible = "simple-audio-amplifier";
+		enable-gpios = <&gpio 17 0>;
+		VCC-supply = <&vdd_3v3_reg>;
+	};
+*/
 	
 	sound-hdmi {
 		compatible = "fsl,imx-audio-cdnhdmi";
@@ -99,7 +121,45 @@
 		cpu-dai = <&micfil>;
 	};
 
+	sound-xcvr {
+		compatible = "fsl,imx-audio-xcvr";
+		model = "imx-audio-xcvr";
+		cpu-dai = <&xcvr>;
+	};
+
+
+	tlv320_xtal: tlv320_xtal {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <12288000>;
+	};
+
+	sound-tlv320{
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "sound-card-tlv320aic3101";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&dailink_master>;
+		simple-audio-card,frame-master = <&dailink_master>;
+		simple-audio-card,widgets =
+			"Microphone", "Microphone Jack",
+			"Headphone", "Headphone Jack";
+		simple-audio-card,routing =
+			"Headphone Jack", "HPLOUT",
+			"Headphone Jack", "HPROUT",
+			"MIC2R", "Microphone Jack",
+			"Microphone Jack", "Mic Bias";
+
+		simple-audio-card,cpu {
+			sound-dai = <&sai3>;
+		};
+
+		dailink_master: simple-audio-card,codec {
+			sound-dai = <&tlv320aic3x>;
+		};
+	};
+
 };
+
 
 &A53_0 {
 	cpu-supply = <&buck2>;
@@ -134,7 +194,7 @@
 };
 
 &aud2htx {
-	status = "disabled";
+	status = "okay";
 };
 
 &ecspi2 {
@@ -477,6 +537,22 @@
 			"M2E_WLAN_ENn";
 	};
 
+	tlv320aic3x: codec@18 {
+		#sound-dai-cells = <0>;
+		/* Our codec is 3101. much closer to the 3104, than using 3x*/
+		compatible = "ti,tlv320aic3104";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_aud_codec_nrst>;
+		clocks = <&tlv320_xtal>;
+		reg = <0x18>;
+		reset-gpios = <&gpio1 28 GPIO_ACTIVE_LOW>;
+		ai3x-micbias-vg = <1>;
+		AVDD-supply = <&reg_3v3>;
+		IOVDD-supply = <&reg_1v8>;
+		DRVDD-supply = <&reg_3v3>;
+		DVDD-supply = <&reg_1v8>;
+	};
+
 };
 
 &irqsteer_hdmi {
@@ -509,6 +585,7 @@
 
 &lcdif3 {
 	status = "okay";
+
 	thres-low  = <1 2>;             /* (FIFO * 1 / 2) */
 	thres-high = <3 4>;             /* (FIFO * 3 / 4) */
 };
@@ -529,12 +606,12 @@
 &snvs_pwrkey {
 	status = "okay";
 };
-
+/*
 &easrc {
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
-
+*/
 &micfil {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pdm>;
@@ -595,15 +672,23 @@
 };
 
 &sai2 {
-	status = "disabled";
+	#sound-dai-cells = <0>;
+	status = "okay";
 };
 
+
 &sai3 {
-	status = "disabled";
+	#sound-dai-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	/*fsl,sai-mclk-direction-output;*/
+	/*fsl,sai-synchronous;*/
+	status = "okay";
 };
 
 &xcvr {
-	status = "disabled";
+	#sound-dai-cells = <0>;
+	status = "okay";
 };
 
 &sdma2 {
@@ -877,6 +962,16 @@
 		>;
 	};
 
+	pinctrl_sai3: sai3_grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_TXFS__AUDIOMIX_SAI3_TX_SYNC		0xd6
+			MX8MP_IOMUXC_SAI3_TXC__AUDIOMIX_SAI3_TX_BCLK		0xd6
+			MX8MP_IOMUXC_SAI3_RXD__AUDIOMIX_SAI3_RX_DATA00		0xd6
+			MX8MP_IOMUXC_SAI3_TXD__AUDIOMIX_SAI3_TX_DATA00		0xd6
+			MX8MP_IOMUXC_SAI3_MCLK__AUDIOMIX_SAI3_MCLK		0xd6
+		>;
+	};
+
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_UART1_RXD__UART1_DCE_RX	0x140
@@ -1070,6 +1165,13 @@
 			MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2	0x59
 		>;
 	};
+
+	pinctrl_aud_codec_nrst: aud_codec_nrst_grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ENET_RD2__GPIO1_IO28	0x6
+		>;
+	};
+
 };
 
 &vpu_g1 {
