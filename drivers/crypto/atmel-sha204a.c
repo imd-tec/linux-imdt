@@ -85,8 +85,10 @@ static int atmel_sha204a_rng_read(struct hwrng *rng, void *data, size_t max,
 	if (ret)
 		return ret;
 
-	max = min(sizeof(cmd.data), max);
-	memcpy(data, cmd.data, max);
+	// The recieved packet contains 1 length byte, 32 bytes of random data and two trailing bytes for CRC
+	max = (cmd.rxsize - CMD_OVERHEAD_SIZE);
+	// The recieved data has the length byte at the beginning, so we need to skip it
+	memcpy(data, &(cmd.data[1]), max);
 
 	return max;
 }
