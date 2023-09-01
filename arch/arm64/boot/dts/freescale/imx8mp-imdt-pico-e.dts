@@ -246,7 +246,6 @@
 	};
 };
 
-
 &flexspi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexspi0>;
@@ -408,9 +407,9 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	eeprom@50 {
-		compatible = "atmel,24c04";
-		reg = <0x50>;
+	secure-eeprom@64 {
+		compatible = "atmel,atsha204a";
+		reg = <0x64>;
 	};
 };
 

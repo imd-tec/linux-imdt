@@ -921,7 +921,8 @@ static int i2c_imx_write(struct imx_i2c_struct *i2c_imx, struct i2c_msg *msgs,
 			 bool atomic)
 {
 	int i, result;
-
+	bool ignore_nak = (msgs->flags & I2C_M_IGNORE_NAK);
+	
 	dev_dbg(&i2c_imx->adapter.dev, "<%s> write slave address: addr=0x%x\n",
 		__func__, i2c_8bit_addr_from_msg(msgs));
 
@@ -930,9 +931,10 @@ static int i2c_imx_write(struct imx_i2c_struct *i2c_imx, struct i2c_msg *msgs,
 	result = i2c_imx_trx_complete(i2c_imx, atomic);
 	if (result)
 		return result;
-	result = i2c_imx_acked(i2c_imx);
+	result =  ignore_nak ? 0 : i2c_imx_acked(i2c_imx);
 	if (result)
 		return result;
+
 	dev_dbg(&i2c_imx->adapter.dev, "<%s> write data\n", __func__);
 
 	/* write data */
@@ -944,7 +946,7 @@ static int i2c_imx_write(struct imx_i2c_struct *i2c_imx, struct i2c_msg *msgs,
 		result = i2c_imx_trx_complete(i2c_imx, atomic);
 		if (result)
 			return result;
-		result = i2c_imx_acked(i2c_imx);
+		result = ignore_nak ? 0 : i2c_imx_acked(i2c_imx);
 		if (result)
 			return result;
 	}

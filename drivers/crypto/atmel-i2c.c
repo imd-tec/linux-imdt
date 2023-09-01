@@ -307,9 +307,9 @@ static int device_sanity_check(struct i2c_client *client)
 	 */
 	if (cmd->data[LOCK_CONFIG_IDX] || cmd->data[LOCK_VALUE_IDX]) {
 		dev_err(&client->dev, "Configuration or Data and OTP zones are unlocked!\n");
-		ret = -ENOTSUPP;
+		//ret = -ENOTSUPP;
 	}
-
+	
 	/* fall through */
 free_cmd:
 	kfree(cmd);
