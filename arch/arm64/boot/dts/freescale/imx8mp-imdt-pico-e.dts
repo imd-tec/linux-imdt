@@ -399,6 +399,11 @@
 		compatible = "sensirion,sht4x";
 		reg = <0x44>;
 	};
+
+	rv3028: rtc@52 {
+		compatible = "microcrystal,rv3028";
+		reg = <0x52>;
+	};
 };
 
 &i2c3 {
