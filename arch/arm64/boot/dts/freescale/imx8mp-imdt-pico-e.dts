@@ -181,18 +181,6 @@
 	status = "okay";
 };
 
-&pwm1 {
-	status = "disabled";
-};
-
-&pwm2 {
-	status = "disabled";
-};
-
-&pwm4 {
-	status = "disabled";
-};
-
 &aud2htx {
 	status = "okay";
 };
@@ -207,7 +195,7 @@
 	status = "okay";
 
 	/* IMU */
-	lsm6dsm {
+	lsm6dsm@0 {
 		compatible = "st,lsm6dsl";
 		reg = <0>;
 		pinctrl-0 = <&pinctrl_imu>;
@@ -218,7 +206,7 @@
 	};
 
 
-	ap1302_spi {
+	ap1302_spi@1 {
 		compatible = "onnn,ap1302";
 		spi-max-frequency = <3000000>;
 		reg = <1>;
@@ -368,7 +356,7 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	bq25892 {
+	bq25892@6b {
 		compatible = "ti,bq25892";
 		reg = <0x6b>;
 		pinctrl-0 = <&pinctrl_bq25892>;
@@ -390,12 +378,12 @@
 		ti,thermal-regulation-threshold = <120>;
 	};
 
-	mmc5633 {
+	mmc5633@30 {
 		compatible = "memsic,mmc5633";
 		reg = <0x30>;
 	};
 
-	sht4x {
+	sht4x@44 {
 		compatible = "sensirion,sht4x";
 		reg = <0x44>;
 	};
@@ -579,43 +567,21 @@
 	status = "okay";
 };
 
-&lcdif1 {
-	status = "disabled";
-};
-
-&lcdif2 {
-	status = "disabled";
-};
-
 &lcdif3 {
 	status = "okay";
-
 	thres-low  = <1 2>;             /* (FIFO * 1 / 2) */
 	thres-high = <3 4>;             /* (FIFO * 3 / 4) */
-};
-
-
-&ldb {
-	status = "disabled";
-};
-
-&ldb_phy {
-	status = "disabled";
-};
-
-&mipi_dsi {
-	status = "disabled";
 };
 
 &snvs_pwrkey {
 	status = "okay";
 };
-/*
+
 &easrc {
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
-*/
+
 &micfil {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pdm>;
@@ -845,8 +811,8 @@
 	
 	pinctrl_fec: fecgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SAI1_RXD2__ENET1_MDC		0x3
-			MX8MP_IOMUXC_SAI1_RXD3__ENET1_MDIO		0x3
+			MX8MP_IOMUXC_SAI1_RXD2__ENET1_MDC			0x3
+			MX8MP_IOMUXC_SAI1_RXD3__ENET1_MDIO			0x3
 			MX8MP_IOMUXC_SAI1_RXD4__ENET1_RGMII_RD0		0x91
 			MX8MP_IOMUXC_SAI1_RXD5__ENET1_RGMII_RD1		0x91
 			MX8MP_IOMUXC_SAI1_RXD6__ENET1_RGMII_RD2		0x91

@@ -1,0 +1,184 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 NXP
+ * Copyright 2022 IMD Technologies
+ */
+
+#include "imx8mp-imdt-pico-e.dts"
+
+/ {
+	model = "IMD Technologies Pico v3 Board";
+	compatible = "imdt,imx8mp-imdt-pico-v3", "fsl,imx8mp";
+
+	/delete-node/ sound-hdmi;
+	/delete-node/ sound-xcvr;
+	/delete-node/ tlv320_xtal;
+	/delete-node/ sound-tlv320;
+};
+
+&aud2htx {
+	status = "disabled";
+};
+
+&ecspi2 {
+	lsm6dsm@0 {
+		st,drdy-int-pin = <2>;
+	};
+};
+
+&fec {
+	status = "disabled";
+};
+
+&flexspi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexspi0>;
+	status = "okay";
+};
+
+
+&flexcan1 {
+	status = "disabled";
+};
+
+&i2c2 {
+	/delete-node/ rtc@52;
+};
+
+&i2c3 {
+	/delete-node/ secure-eeprom@64;
+	eeprom@50 {
+		compatible = "atmel,24c04";
+		reg = <0x50>;
+	};
+};
+
+
+&i2c5 {
+	clock-frequency = <384000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c5>;
+	status = "okay";
+};
+
+&i2c6 {
+	/delete-node/ gpio@20;
+	/delete-node/ gpio@21;
+	/delete-node/ codec@18;
+
+};
+
+&irqsteer_hdmi {
+	status = "disabled";
+};
+
+&hdmi_blk_ctrl {
+	status = "disabled";
+};
+
+&hdmi_pavi {
+	status = "disabled";
+};
+
+&hdmi {
+	status = "disabled";
+};
+
+&hdmiphy {
+	status = "disabled";
+};
+
+&lcdif3 {
+	status = "disabled";
+};
+
+&pcie{
+	status = "disabled";
+	/delete-node/ wifi_wake_host;
+};
+
+&pcie_phy{
+	status = "disabled";
+};
+
+&sai2 {
+	status = "disabled";
+};
+
+&sai3 {
+	status = "disabled";
+};
+
+&xcvr {
+	status = "disabled";
+};
+
+&sdma2 {
+	status = "disabled";
+};
+
+&uart1 {
+	pinctrl-0 = <&pinctrl_uart1>, <&pinctrl_bluetooth>;
+};
+
+
+&usdhc1 {
+	/delete-property/ pinctrl-assert-gpios;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc1>;
+	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
+	bus-width = <4>;
+	pm-ignore-notify;
+	keep-power-in-suspend;
+	non-removable;
+	/delete-property/ wakeup-source;
+	/delete-property/ fsl,sdio-interrupt-enabled;
+	cap-power-off-card;
+	/delete-property/ vmmc-supply;
+
+	brcmf: bcrmf@1 {
+		reg = <0x1>;
+		compatible = "brcm,bcm4329-fmac";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wlan_irq>;
+
+		interrupt-parent = <&gpio1>;
+		interrupts = <17 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "host-wake";
+	};
+};
+
+&iomuxc {
+	/delete-node/ hoggrp;
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106
+			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24		0x06
+		>;
+	};
+
+	/delete-node/ i2c5grp;
+	pinctrl_i2c5: i2c5grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_HDMI_DDC_SCL__I2C5_SCL		0x400001c2
+			MX8MP_IOMUXC_HDMI_DDC_SDA__I2C5_SDA		0x400001c2
+		>;
+	};
+	/delete-node/ i2c6grp;
+	pinctrl_i2c6: i2c6grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_RXFS__I2C6_SCL	0x400001c2
+			MX8MP_IOMUXC_SAI5_RXC__I2C6_SDA		0x400001c2
+		>;
+	};
+
+	/delete-node/ uart3grp;
+	pinctrl_uart3: uart3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD1_DATA7__UART3_DCE_RX		0x140
+			MX8MP_IOMUXC_SD1_DATA6__UART3_DCE_TX		0x140
+		>;
+	};
+};
