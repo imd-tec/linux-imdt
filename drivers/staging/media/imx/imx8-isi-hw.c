@@ -335,19 +335,8 @@ void mxc_isi_channel_set_csc(struct mxc_isi_dev *mxc_isi,
 		 CHNL_IMG_CTRL_CSC_BYPASS_MASK |
 		 CHNL_IMG_CTRL_CSC_MODE_MASK);
 
-	/* YUV to RGB/BGR conversion results in the R and B channels being
-	 * swapped. It may be possible to fix this using the coefficients, but
-	 * for now we override the output format. */
-
-	if (is_yuv(src_fmt->fourcc) && (dst_fmt->fourcc == V4L2_PIX_FMT_RGB24)) {
-		/* Set the output to BGR when converting from YUV to RGB */
-		val |= MXC_ISI_OUT_FMT_BGR32P << CHNL_IMG_CTRL_FORMAT_OFFSET;
-	} else if (is_yuv(src_fmt->fourcc) && (dst_fmt->fourcc == V4L2_PIX_FMT_BGR24)) {
-		/* Set the output to RGB when converting from YUV to BGR */
-		val |= MXC_ISI_OUT_FMT_RGB32P << CHNL_IMG_CTRL_FORMAT_OFFSET;
-	} else {
-		val |= dst_fmt->color << CHNL_IMG_CTRL_FORMAT_OFFSET;
-	}
+	/* set outbuf format */
+	val |= dst_fmt->color << CHNL_IMG_CTRL_FORMAT_OFFSET;
 
 	mxc_isi->cscen = 1;
 
@@ -363,13 +352,13 @@ void mxc_isi_channel_set_csc(struct mxc_isi_dev *mxc_isi,
 		val |= (CHNL_IMG_CTRL_CSC_MODE_RGB2YCBCR << CHNL_IMG_CTRL_CSC_MODE_OFFSET);
 	} else {
 		/* Bypass CSC */
-		dev_dbg(&mxc_isi->pdev->dev, "%s: bypass csc\n", __func__);
+		pr_info("bypass csc\n");
 		mxc_isi->cscen = 0;
 		val |= CHNL_IMG_CTRL_CSC_BYPASS_ENABLE;
 	}
 
-	dev_dbg(&mxc_isi->pdev->dev, "%s: input format is %s", __func__, (char *)&src_fmt->fourcc);
-	dev_dbg(&mxc_isi->pdev->dev, "%s: output format is %s", __func__, (char *)&dst_fmt->fourcc);
+	printk_pixelformat("input fmt", src_fmt->fourcc);
+	printk_pixelformat("output fmt", dst_fmt->fourcc);
 
 	if (mxc_isi->cscen) {
 		writel(coeffs[csc][0], mxc_isi->regs + CHNL_CSC_COEFF0);
@@ -663,10 +652,8 @@ void mxc_isi_channel_config_loc(struct mxc_isi_dev *mxc_isi,
 	val &= ~CHNL_CTRL_CHNL_BYPASS_MASK;
 
 	/*  Bypass channel */
-	if (!mxc_isi->cscen && !mxc_isi->scale) {
-		dev_dbg(&mxc_isi->pdev->dev, "%s: bypassing channel\n", __func__);
+	if (!mxc_isi->cscen && !mxc_isi->scale)
 		val |= (CHNL_CTRL_CHNL_BYPASS_ENABLE << CHNL_CTRL_CHNL_BYPASS_OFFSET);
-	}
 
 	writel(val, mxc_isi->regs + CHNL_CTRL);
 }

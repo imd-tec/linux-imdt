@@ -3,7 +3,6 @@
  * TI BQ25890 charger driver
  *
  * Copyright (C) 2015 Intel Corporation
- * Copyright (c) 2022 IMD Technologies
  */
 
 #include <linux/module.h>
@@ -133,8 +132,6 @@ struct bq25890_device {
 	struct bq25890_state state;
 
 	struct mutex lock; /* protect state data */
-
-	struct gpio_desc *stat_gpio;
 };
 
 static DEFINE_IDR(bq25890_id);
@@ -901,8 +898,6 @@ static int bq25890_rw_init_data(struct bq25890_device *bq)
 	bool write = !bq->read_back_init_data;
 	int ret;
 	int i;
-	int state_change_count = 0;
-	struct bq25890_state prev_state, new_state;
 
 	const struct {
 		enum bq25890_fields id;
@@ -947,7 +942,7 @@ static int bq25890_hw_init(struct bq25890_device *bq)
 	if (!bq->skip_reset) {
 		ret = bq25890_chip_reset(bq);
 		if (ret < 0) {
-			dev_err(bq->dev, "Reset failed %d\n", ret);
+			dev_dbg(bq->dev, "Reset failed %d\n", ret);
 			return ret;
 		}
 	} else {
@@ -966,7 +961,7 @@ static int bq25890_hw_init(struct bq25890_device *bq)
 	/* disable watchdog */
 	ret = bq25890_field_write(bq, F_WD, 0);
 	if (ret < 0) {
-		dev_err(bq->dev, "Disabling watchdog failed %d\n", ret);
+		dev_dbg(bq->dev, "Disabling watchdog failed %d\n", ret);
 		return ret;
 	}
 
@@ -977,56 +972,14 @@ static int bq25890_hw_init(struct bq25890_device *bq)
 
 	ret = bq25890_get_chip_state(bq, &bq->state);
 	if (ret < 0) {
-		dev_err(bq->dev, "Get state failed %d\n", ret);
-		return ret;
-	}
-
-	/* Get the current state */
-	ret = bq25890_get_chip_state(bq, &prev_state);
-	if (ret < 0) {
-		dev_err(bq->dev, "Get state failed %d\n", ret);
-		return ret;
-	}
-
-	for (i = 0; i < 10; i++) {
-
-		/* Get the current state again */
-		ret = bq25890_get_chip_state(bq, &new_state);
-		if (ret < 0) {
-			dev_err(bq->dev, "Get state failed %d\n", ret);
-			return ret;
-		}
-
-		/* Check the current state against the previous value */
-		if (!memcmp(&prev_state, &new_state, sizeof(new_state)))
-			continue;
-
-		prev_state = new_state;
-
-		state_change_count++;
-	}
-
-	/* If the state is toggling, we infer that the battery isn't present */
-	if (state_change_count > 1) {
-		dev_warn(bq->dev, "Battery not detected; charging disabled\n");
-		ret = bq25890_field_write(bq, F_CHG_CFG, 0);
-		if (ret < 0) {
-			dev_err(bq->dev, "Failed to disable charging %d\n", ret);
-			return ret;
-		}
-	}
-
-	/* Save the latest state */
-	ret = bq25890_get_chip_state(bq, &bq->state);
-	if (ret < 0) {
-		dev_err(bq->dev, "Get state failed %d\n", ret);
+		dev_dbg(bq->dev, "Get state failed %d\n", ret);
 		return ret;
 	}
 
 	/* Configure ADC for continuous conversions when charging */
-	ret = bq25890_field_write(bq, F_CONV_RATE, !!bq->state.online);
+	ret = bq25890_field_write(bq, F_CONV_RATE, bq->state.online && !bq->state.hiz);
 	if (ret < 0) {
-		dev_err(bq->dev, "Config ADC failed %d\n", ret);
+		dev_dbg(bq->dev, "Config ADC failed %d\n", ret);
 		return ret;
 	}
 
@@ -1385,39 +1338,6 @@ static int bq25890_irq_probe(struct bq25890_device *bq)
 	return gpiod_to_irq(irq);
 }
 
-static ssize_t charge_enabled_show(struct device *dev,
-				  struct device_attribute *attr,
-				  char *buf)
-{
-	struct bq25890_device *bq = dev_get_drvdata(dev);
-	int ret;
-
-	ret = bq25890_field_read(bq, F_CHG_CFG);
-
-	if (ret < 0)
-		return ret;
-
-	return scnprintf(buf, PAGE_SIZE, "%d\n", ret);
-}
-
-static ssize_t charge_enabled_store(struct device *dev,
-				    struct device_attribute *attr,
-				    const char *buf, size_t len)
-{
-	struct bq25890_device *bq = dev_get_drvdata(dev);
-	int enabled, ret;
-
-	ret = kstrtoint(buf, 0, &enabled);
-	if (ret < 0)
-		return ret;
-
-	bq25890_field_write(bq, F_CHG_CFG, enabled);
-
-	return len;
-}
-
-static DEVICE_ATTR_RW(charge_enabled);
-
 static int bq25890_fw_read_u32_props(struct bq25890_device *bq)
 {
 	int ret;
@@ -1575,52 +1495,44 @@ static int bq25890_probe(struct i2c_client *client)
 	if (client->irq <= 0)
 		client->irq = bq25890_irq_probe(bq);
 
-	if (client->irq < 0)
-		dev_warn(dev, "No irq resource found.\n");
-
-	/* GPIOs */
-
-	bq->stat_gpio = devm_gpiod_get_optional(bq->dev, "stat", GPIOD_IN);
-	if (IS_ERR(bq->stat_gpio)) {
-		dev_err(bq->dev, "Can't get stat GPIO: %ld\n",
-			PTR_ERR(bq->stat_gpio));
-		return PTR_ERR(bq->stat_gpio);
+	if (client->irq < 0) {
+		dev_err(dev, "No irq resource found.\n");
+		return client->irq;
 	}
 
 	/* OTG reporting */
 	bq->usb_phy = devm_usb_get_phy(dev, USB_PHY_TYPE_USB2);
+
+	/*
+	 * This must be before bq25890_power_supply_init(), so that it runs
+	 * after devm unregisters the power_supply.
+	 */
+	ret = devm_add_action_or_reset(dev, bq25890_non_devm_cleanup, bq);
+	if (ret)
+		return ret;
+
+	ret = bq25890_register_regulator(bq);
+	if (ret)
+		return ret;
+
+	ret = bq25890_power_supply_init(bq);
+	if (ret < 0)
+		return dev_err_probe(dev, ret, "registering power supply\n");
+
+	ret = devm_request_threaded_irq(dev, client->irq, NULL,
+					bq25890_irq_handler_thread,
+					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+					BQ25890_IRQ_PIN, bq);
+	if (ret)
+		return ret;
+
 	if (!IS_ERR_OR_NULL(bq->usb_phy)) {
 		INIT_WORK(&bq->usb_work, bq25890_usb_work);
 		bq->usb_nb.notifier_call = bq25890_usb_notifier;
 		usb_register_notifier(bq->usb_phy, &bq->usb_nb);
-	} else {
-		dev_warn(dev, "Failed to get usb_phy.\n");
 	}
-
-	if (client->irq >= 0) {
-		ret = devm_request_threaded_irq(dev, client->irq, NULL,
-						bq25890_irq_handler_thread,
-						IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-						BQ25890_IRQ_PIN, bq);
-		if (ret)
-			goto irq_fail;
-	}
-
-	ret = bq25890_power_supply_init(bq);
-	if (ret < 0) {
-		dev_err(dev, "Failed to register power supply\n");
-		goto irq_fail;
-	}
-
-	device_create_file(bq->dev, &dev_attr_charge_enabled);
 
 	return 0;
-
-irq_fail:
-	if (!IS_ERR_OR_NULL(bq->usb_phy))
-		usb_unregister_notifier(bq->usb_phy, &bq->usb_nb);
-
-	return ret;
 }
 
 static void bq25890_remove(struct i2c_client *client)
@@ -1745,6 +1657,5 @@ static struct i2c_driver bq25890_driver = {
 module_i2c_driver(bq25890_driver);
 
 MODULE_AUTHOR("Laurentiu Palcu <laurentiu.palcu@intel.com>");
-MODULE_AUTHOR("Paul Thomson <pault@imd-tec.com>");
 MODULE_DESCRIPTION("bq25890 charger driver");
 MODULE_LICENSE("GPL");

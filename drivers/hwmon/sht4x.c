@@ -129,11 +129,7 @@ unlock:
 
 static ssize_t sht4x_interval_write(struct sht4x_data *data, long val)
 {
-<<<<<<< HEAD
 	data->update_interval = clamp_val(val, SHT4X_MIN_POLL_INTERVAL, INT_MAX);
-=======
-	data->update_interval = clamp_val(val, SHT4X_MIN_POLL_INTERVAL, UINT_MAX);
->>>>>>> 899b8cfd0466 (Add support for Pico v3 (#12))
 
 	return 0;
 }
@@ -218,11 +214,7 @@ static int sht4x_hwmon_write(struct device *dev, enum hwmon_sensor_types type,
 	}
 }
 
-<<<<<<< HEAD
 static const struct hwmon_channel_info * const sht4x_info[] = {
-=======
-static const struct hwmon_channel_info *sht4x_info[] = {
->>>>>>> 899b8cfd0466 (Add support for Pico v3 (#12))
 	HWMON_CHANNEL_INFO(chip, HWMON_C_UPDATE_INTERVAL),
 	HWMON_CHANNEL_INFO(temp, HWMON_T_INPUT),
 	HWMON_CHANNEL_INFO(humidity, HWMON_H_INPUT),
@@ -240,12 +232,7 @@ static const struct hwmon_chip_info sht4x_chip_info = {
 	.info = sht4x_info,
 };
 
-<<<<<<< HEAD
 static int sht4x_probe(struct i2c_client *client)
-=======
-static int sht4x_probe(struct i2c_client *client,
-		       const struct i2c_device_id *sht4x_id)
->>>>>>> 899b8cfd0466 (Add support for Pico v3 (#12))
 {
 	struct device *device = &client->dev;
 	struct device *hwmon_dev;

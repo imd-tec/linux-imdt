@@ -519,15 +519,7 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
 		.data_alignment = 16,
-	}, {
-		.code = MEDIA_BUS_FMT_YUYV8_1X16,
-		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
-		.data_alignment = 16,
-	}, {
-		.code = MEDIA_BUS_FMT_RGB565_1X16,
-		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RGB565,
-		.data_alignment = 16,
-	}
+	},
 };
 
 #define mipi_csis_write(__csis, __r, __v) writel(__v, __csis->regs + __r)
@@ -967,15 +959,11 @@ static void disp_mix_gasket_config(struct csi_state *state)
 	case MEDIA_BUS_FMT_RGB888_1X24:
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_RGB888;
 		break;
-	case MEDIA_BUS_FMT_RGB565_1X16:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RGB565;
-		break;
 	case MEDIA_BUS_FMT_YUYV8_2X8:
 	case MEDIA_BUS_FMT_YVYU8_2X8:
 	case MEDIA_BUS_FMT_UYVY8_2X8:
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_VYUY8_2X8:
-	case MEDIA_BUS_FMT_YUYV8_1X16:
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_YUV422_8;
 		break;
 	case MEDIA_BUS_FMT_SBGGR8_1X8:
@@ -1016,7 +1004,7 @@ static void disp_mix_gasket_config(struct csi_state *state)
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
 		break;
 	default:
-		v4l2_err(&state->sd, "%s: unsupported format %x\n", __func__, fmt->code);
+		pr_err("gasket not support format %d\n", fmt->code);
 		return;
 	}
 
@@ -1185,10 +1173,7 @@ static int mipi_csis_set_fmt(struct v4l2_subdev *mipi_sd,
 		mf->code = csis_fmt->code;
 	}
 
-	/* Update the CSI configuration */
 	state->csis_fmt = csis_fmt;
-	state->format.width = mf->width;
-	state->format.height = mf->height;
 
 	return 0;
 }
@@ -1455,7 +1440,7 @@ static long csis_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_
 		ret = csis_ioc_qcap(sd, arg);
 		break;
 	default:
-		v4l2_err(&state->sd, "unsupported csi-sam command %x.", cmd);
+		v4l2_err(&state->sd, "unsupported csi-sam command %d.", cmd);
 		ret = -EINVAL;
 		break;
 	}

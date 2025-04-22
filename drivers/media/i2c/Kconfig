@@ -1451,8 +1451,6 @@ config VIDEO_UPD64083
 	  To compile this driver as a module, choose M here: the
 	  module will be called upd64083.
 
-
-
 endmenu
 
 menu "Audio/Video compression chips"
