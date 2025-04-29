@@ -118,7 +118,7 @@
 	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>, <&gpio1 24 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
-	lsm6dsm {
+	lsm6dsm@0 {
 		compatible = "st,lsm6dsl";
 		reg = <0>;
 		pinctrl-0 = <&pinctrl_imu>;
@@ -128,7 +128,7 @@
 		st,drdy-int-pin = <2>;
 	};
 
-	ap1302_spi {
+	ap1302_spi@1 {
 		compatible = "onnn,ap1302";
 		spi-max-frequency = <3000000>;
 		reg = <1>;
@@ -249,7 +249,7 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	bq25892 {
+	bq25892@6b {
 		compatible = "ti,bq25892";
 		reg = <0x6b>;
 		pinctrl-0 = <&pinctrl_bq25892>;
@@ -271,12 +271,12 @@
 		ti,thermal-regulation-threshold = <120>;
 	};
 
-	mmc5633 {
+	mmc5633@30 {
 		compatible = "memsic,mmc5633";
 		reg = <0x30>;
 	};
 
-	sht4x {
+	sht4x@44 {
 		compatible = "sensirion,sht4x";
 		reg = <0x44>;
 	};
@@ -521,7 +521,6 @@
 	status = "okay";
 
 	brcmf: bcrmf@1 {
-		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
 
 		pinctrl-names = "default";

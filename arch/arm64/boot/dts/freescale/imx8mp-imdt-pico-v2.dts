@@ -244,7 +244,7 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	bq25890 {
+	bq25890@6a {
 		compatible = "ti,bq25890";
 		reg = <0x6a>;
 
@@ -260,7 +260,7 @@
 		ti,thermal-regulation-threshold = <120>;
 	};
 
-	bq25892 {
+	bq25892@6b {
 		compatible = "ti,bq25892";
 		reg = <0x6b>;
 
@@ -517,7 +517,6 @@
 	status = "okay";
 
 	brcmf: bcrmf@1 {
-		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
 
 		pinctrl-names = "default";
