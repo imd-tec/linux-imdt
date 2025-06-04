@@ -3,16 +3,13 @@
  * Copyright 2019 NXP
  * Copyright 2025 IMD Technologies
  */
+#include <dt-bindings/gpio/gpio.h>
+#include "imx8mp-pinfunc.h"
 
 /dts-v1/;
 /plugin/;
 
-#include <dt-bindings/usb/pd.h>
-#include "imx8mp.dtsi"
-
 / {
-	model = "IMD Technologies Pico-E Board";
-	compatible = "imdt,imx8mp-imdt-pico-e", "fsl,imx8mp";
 
 	reg_can1_stby: regulator-can1-stby {
 		compatible = "regulator-fixed";
@@ -60,6 +57,11 @@
 			sound-dai = <&tlv320aic3x>;
 		};
 	};
+};
+
+&{/} {
+	model = "IMD Technologies Pico-E Board";
+	compatible = "imdt,imx8mp-imdt-pico-e", "fsl,imx8mp";
 };
 
 &aud2htx {
