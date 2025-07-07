@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 NXP
+ * Copyright 2022 IMD Technologies
+ */
+
+/dts-v1/;
+
+#include "imx8mp-imdt-pico.dtsi"

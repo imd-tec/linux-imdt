@@ -8,7 +8,6 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
-
 / {
 	model = "IMD Technologies Pico-EM Board";
 	compatible = "imdt,imx8mp-imdt-pico-em", "fsl,imx8mp";
@@ -578,6 +577,10 @@
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
 	status = "okay";
+
+	bluetooth {
+		compatible = "nxp,88w8997-bt";
+	};
 };
 
 &uart2 {

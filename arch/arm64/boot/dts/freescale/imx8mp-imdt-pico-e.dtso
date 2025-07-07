@@ -5,8 +5,10 @@
  */
 
 /dts-v1/;
+/plugin/;
 
-#include "imx8mp-imdt-pico.dtsi"
+#include <dt-bindings/usb/pd.h>
+#include "imx8mp.dtsi"
 
 / {
 	model = "IMD Technologies Pico-E Board";
