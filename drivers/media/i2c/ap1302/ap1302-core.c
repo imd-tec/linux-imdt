@@ -82,6 +82,13 @@ static const struct ap1302_sensor_info ap1302_sensor_info[] = {
 		.resolution = { 4208, 3120 },
 		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
+	{
+		.model = "onnn,ar0521",
+		.name = "ar0521",
+		.i2c_addr = 0x36,
+		.resolution = { 2592, 1944 },
+		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
+	},
 };
 
 static const struct ap1302_mode ap1302_other_modes[] = {
@@ -1781,6 +1788,6 @@ MODULE_AUTHOR("Florian Rebaudo <frebaudo@witekio.com>");
 MODULE_AUTHOR("Laurent Pinchart <laurent.pinchart@ideasonboard.com>");
 MODULE_AUTHOR("Anil Kumar M <anil.mamidala@xilinx.com>");
 MODULE_AUTHOR("Paul Thomson <pault@imd-tec.com>");
-MODULE_AUTHOR("William Bright<william.bright@imd-tec.com>");
+MODULE_AUTHOR("William Bright <william.bright@imd-tec.com>");
 MODULE_DESCRIPTION("ON Semiconductor AP1302 ISP driver");
 MODULE_LICENSE("GPL");
