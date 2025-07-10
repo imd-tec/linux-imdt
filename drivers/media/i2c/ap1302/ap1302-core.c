@@ -5,7 +5,7 @@
  * Copyright (C) 2021, Witekio, Inc.
  * Copyright (C) 2021, Xilinx, Inc.
  * Copyright (C) 2021, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
- * Copyright (C) 2021, IMD Technologies Ltd
+ * Copyright (C) 2025, IMD Technologies Ltd
  *
  */
 
@@ -432,7 +432,7 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 			ap1302_read(ap1302, AP1302_SYS_START, &sys_start);
 
 			if (sys_start & AP1302_SYS_START_STALL_STATUS) {
-				dev_dbg(ap1302->dev, "%s i = %d %x %x",
+				dev_dbg(ap1302->dev, "%s i = %d %x %lx",
 					__func__, i, sys_start,
 					sys_start & AP1302_SYS_START_STALL_STATUS);
 				break;
@@ -458,7 +458,7 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 			ap1302_read(ap1302, AP1302_SYS_START, &sys_start);
 
 			if (0 == (sys_start & AP1302_SYS_START_STALL_STATUS)) {
-				dev_dbg(ap1302->dev, "%s i = %d %x %x",
+				dev_dbg(ap1302->dev, "%s i = %d %x %lx",
 					__func__, i, sys_start,
 					sys_start & AP1302_SYS_START_STALL_STATUS);
 				break;
@@ -479,7 +479,7 @@ int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 
 static struct v4l2_mbus_framefmt *
 ap1302_get_pad_format(struct ap1302_device *ap1302,
-		      struct v4l2_subdev_pad_config *cfg,
+		      struct v4l2_subdev_state *cfg,
 		      unsigned int pad, u32 which)
 {
 	switch (which) {
@@ -493,7 +493,7 @@ ap1302_get_pad_format(struct ap1302_device *ap1302,
 }
 
 static int ap1302_init_cfg(struct v4l2_subdev *sd,
-			   struct v4l2_subdev_pad_config *cfg)
+			   struct v4l2_subdev_state *cfg)
 {
 	u32 which = cfg ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
 	struct ap1302_device *ap1302 = to_ap1302(sd);
@@ -525,7 +525,7 @@ static int ap1302_init_cfg(struct v4l2_subdev *sd,
 }
 
 static int ap1302_enum_mbus_code(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_state *cfg,
 				 struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct ap1302_device *ap1302 = to_ap1302(sd);
@@ -553,7 +553,7 @@ static int ap1302_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int ap1302_enum_frame_size(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_state *cfg,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct ap1302_device *ap1302 = to_ap1302(sd);
@@ -603,7 +603,7 @@ static int ap1302_enum_frame_size(struct v4l2_subdev *sd,
 
 static int ap1302_enum_frame_interval(
 	struct v4l2_subdev *sd,
-	struct v4l2_subdev_pad_config *cfg,
+	struct v4l2_subdev_state *cfg,
 	struct v4l2_subdev_frame_interval_enum *fie)
 {
 	unsigned int i;
@@ -646,7 +646,7 @@ static int ap1302_enum_frame_interval(
 }
 
 static int ap1302_get_fmt(struct v4l2_subdev *sd,
-			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_state *cfg,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct ap1302_device *ap1302 = to_ap1302(sd);
@@ -662,7 +662,7 @@ static int ap1302_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int ap1302_set_fmt(struct v4l2_subdev *sd,
-			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_state *cfg,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct ap1302_device *ap1302 = to_ap1302(sd);
@@ -733,7 +733,7 @@ static int ap1302_set_fmt(struct v4l2_subdev *sd,
 }
 
 static int ap1302_get_selection(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *cfg,
 				struct v4l2_subdev_selection *sel)
 {
 	struct ap1302_device *ap1302 = to_ap1302(sd);
@@ -1190,7 +1190,7 @@ static const struct v4l2_subdev_internal_ops ap1302_subdev_internal_ops = {
  */
 
 static int ap1302_sensor_enum_mbus_code(struct v4l2_subdev *sd,
-					struct v4l2_subdev_pad_config *cfg,
+					struct v4l2_subdev_state *cfg,
 					struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct ap1302_sensor *sensor = to_ap1302_sensor(sd);
@@ -1204,7 +1204,7 @@ static int ap1302_sensor_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int ap1302_sensor_enum_frame_size(struct v4l2_subdev *sd,
-					 struct v4l2_subdev_pad_config *cfg,
+					 struct v4l2_subdev_state *cfg,
 					 struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct ap1302_sensor *sensor = to_ap1302_sensor(sd);
@@ -1225,7 +1225,7 @@ static int ap1302_sensor_enum_frame_size(struct v4l2_subdev *sd,
 }
 
 static int ap1302_sensor_get_fmt(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_state *cfg,
 				 struct v4l2_subdev_format *fmt)
 {
 	struct ap1302_sensor *sensor = to_ap1302_sensor(sd);
@@ -1516,12 +1516,6 @@ static int ap1302_parse_of(struct ap1302_device *ap1302)
 	const char *model;
 	unsigned int i;
 	int ret;
-	struct pinctrl *pinctrl;
-
-	/* TODO - this is necessary to change the MCLK pinmux settings... is there a better way? */
-	pinctrl = devm_pinctrl_get_select_default(ap1302->dev);
-	if (IS_ERR(pinctrl))
-		dev_warn(ap1302->dev, "No pin available (%ld)\n", PTR_ERR(pinctrl));
 
 
 	/* Clock */
@@ -1640,7 +1634,7 @@ static void ap1302_cleanup(struct ap1302_device *ap1302)
 	devm_kfree(ap1302->dev, ap1302);
 }
 
-static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int ap1302_probe(struct i2c_client *client)
 {
 	struct ap1302_device *ap1302;
 	unsigned int i;
@@ -1742,7 +1736,7 @@ error:
 	return ret;
 }
 
-static int ap1302_remove(struct i2c_client *client)
+static void ap1302_remove(struct i2c_client *client)
 {
 	struct ap1302_device *ap1302 = i2c_get_clientdata(client);
 
@@ -1763,7 +1757,7 @@ static int ap1302_remove(struct i2c_client *client)
 
 	ap1302_cleanup(ap1302);
 
-	return 0;
+	return;
 }
 
 static const struct of_device_id ap1302_of_id_table[] = {
@@ -1787,6 +1781,6 @@ MODULE_AUTHOR("Florian Rebaudo <frebaudo@witekio.com>");
 MODULE_AUTHOR("Laurent Pinchart <laurent.pinchart@ideasonboard.com>");
 MODULE_AUTHOR("Anil Kumar M <anil.mamidala@xilinx.com>");
 MODULE_AUTHOR("Paul Thomson <pault@imd-tec.com>");
-
+MODULE_AUTHOR("William Bright<william.bright@imd-tec.com>");
 MODULE_DESCRIPTION("ON Semiconductor AP1302 ISP driver");
 MODULE_LICENSE("GPL");

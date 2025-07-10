@@ -1,6 +1,6 @@
 /**
  * @file ap1302-sysfs.c
- * @copyright Copyright (c) 2022 IMD Technologies. All rights reserved.
+ * @copyright Copyright (c) 2025 IMD Technologies. All rights reserved.
  * @author: Paul Thomson
  */
 

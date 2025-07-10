@@ -5,7 +5,7 @@
  * Copyright (C) 2021, Witekio, Inc.
  * Copyright (C) 2021, Xilinx, Inc.
  * Copyright (C) 2021, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
- * Copyright (C) 2021, IMD Technologies Ltd
+ * Copyright (C) 2025, IMD Technologies Ltd
  *
  */
 

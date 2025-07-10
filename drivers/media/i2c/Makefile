@@ -151,6 +151,6 @@ obj-$(CONFIG_VIDEO_VP27SMPX) += vp27smpx.o
 obj-$(CONFIG_VIDEO_VPX3220) += vpx3220.o
 obj-$(CONFIG_VIDEO_WM8739) += wm8739.o
 obj-$(CONFIG_VIDEO_WM8775) += wm8775.o
-obj-$(CONFIG_VIDEO_AP1302)     += ap1302.o
+obj-$(CONFIG_VIDEO_AP1302)     += ap1302/
 obj-$(CONFIG_VIDEO_AP130X)     += ap130x.o
 obj-$(CONFIG_VIDEO_OX05B1S) += ox05b1s/
