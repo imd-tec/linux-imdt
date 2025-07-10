@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 IMD Technologies
+
+ */
+
+/dts-v1/;
+/plugin/;
+
+&i2c4 
+{
+	camera@3c {
+		sensors {
+			onnn,model = "onnn,ar0521"; // Change the ONN model to be ar0521
+		};
+	};
+};
