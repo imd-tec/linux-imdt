@@ -371,6 +371,9 @@
 #define AP1302_TCLK_PRE_MASK			0xFF00
 #define AP1302_TCLK_PRE_SHIFT			0x8
 
+#define AP1302_PREVIEW_ROI_RANGE		16383 // Reg format is S1.14, (2^14)-1 is 16383
+
+#define AP1302_CROP_CTL_BITS 0x2000
 struct ap1302_device;
 
 enum {

@@ -676,7 +676,6 @@ static int ap1302_set_fmt(struct v4l2_subdev *sd,
 	const struct ap1302_format_info *info = NULL;
 	struct v4l2_mbus_framefmt *format;
 	unsigned int i;
-	bool valid_frame_size = false;
 
 	/* Formats on the sink pads can't be changed. */
 	if (fmt->pad != AP1302_PAD_SOURCE)
@@ -698,17 +697,10 @@ static int ap1302_set_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
-	/* Validate the frame size against the media bus code */
-	for (i = 0; i < ARRAY_SIZE(ap1302_other_modes); i++) {
-		if ((fmt->format.width == ap1302_other_modes[i].resolution.width) &&
-		    (fmt->format.height == ap1302_other_modes[i].resolution.height)) {
-			valid_frame_size = true;
-			break;
-		}
-	}
-
-	if (!valid_frame_size) {
-		dev_err(sd->dev, "%s: invalid frame size\n", __func__);
+	if((fmt->format.width > ap1302->sensor_info->resolution.width ) || (fmt->format.height > ap1302->sensor_info->resolution.height)) {
+		dev_err(sd->dev, "%s: invalid format %ux%u > max %ux%u\n", __func__,
+			fmt->format.width, fmt->format.height,
+			ap1302->sensor_info->resolution.width, ap1302->sensor_info->resolution.height);
 		return -EINVAL;
 	}
 
@@ -744,22 +736,107 @@ static int ap1302_get_selection(struct v4l2_subdev *sd,
 				struct v4l2_subdev_selection *sel)
 {
 	struct ap1302_device *ap1302 = to_ap1302(sd);
-	const struct ap1302_size *resolution = &ap1302->sensor_info->resolution;
+	const u32 native_width = ap1302->sensor_info->resolution.width;
+	const u32 native_height = ap1302->sensor_info->resolution.height;
+	int ret;
+	u32 x0;
+	u32 y0;
+	u32 x1;
+	u32 y1;
 
 	switch (sel->target) {
 	case V4L2_SEL_TGT_NATIVE_SIZE:
+	// Native values of the sensor
+		sel->r.left = 0;
+		sel->r.top = 0;
+		sel->r.width = native_width;
+		sel->r.height = native_height;
+		break;
 	case V4L2_SEL_TGT_CROP_BOUNDS:
 	case V4L2_SEL_TGT_CROP_DEFAULT:
 	case V4L2_SEL_TGT_CROP:
-		sel->r.left = 0;
-		sel->r.top = 0;
-		sel->r.width = resolution->width;
-		sel->r.height = resolution->height;
+		ret = ap1302_read(ap1302, AP1302_PREVIEW_ROI_X0, &x0);
+		if(ret < 0) {
+			dev_err(ap1302->dev, "Failed to read AP1302_PREVIEW_ROI_X0: %d\n", ret);
+			return ret;
+		}
+		sel->r.left = DIV_ROUND_UP((x0 * native_width), AP1302_PREVIEW_ROI_RANGE) ;
+		ret = ap1302_read(ap1302, AP1302_PREVIEW_ROI_Y0, &y0);
+		if(ret < 0) {
+			dev_err(ap1302->dev, "Failed to read AP1302_PREVIEW_ROI_Y0: %d\n", ret);
+			return ret;
+		}
+		sel->r.top = DIV_ROUND_UP ((y0 * native_height), AP1302_PREVIEW_ROI_RANGE);
+
+		ret = ap1302_read(ap1302, AP1302_PREVIEW_ROI_X1, &x1);
+		if(ret < 0) {
+			dev_err(ap1302->dev, "Failed to read AP1302_PREVIEW_ROI_X1: %d\n", ret);
+			return ret;
+		}
+		ret = ap1302_read(ap1302, AP1302_PREVIEW_ROI_Y1, &y1);
+		if(ret < 0) {
+			dev_err(ap1302->dev, "Failed to read AP1302_PREVIEW_ROI_Y1: %d\n", ret);
+			return ret;
+		}
+		sel->r.width = DIV_ROUND_UP(((x1 - x0) * native_width), AP1302_PREVIEW_ROI_RANGE);
+		sel->r.height = DIV_ROUND_UP(((y1 - y0) * native_height), AP1302_PREVIEW_ROI_RANGE);
 		break;
 
 	default:
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+static int ap1302_set_selection(struct v4l2_subdev *sd,
+		struct v4l2_subdev_state *cfg,
+		struct v4l2_subdev_selection *sel)
+{
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+	const struct ap1302_size *resolution = &ap1302->sensor_info->resolution;
+	int ret;
+	u32 value;
+
+	if (sel->which != V4L2_SUBDEV_FORMAT_ACTIVE ||
+	    sel->target != V4L2_SEL_TGT_CROP)
+		return -EINVAL;
+
+	/* Set the sensor mode */
+	ret = ap1302_read(ap1302, AP1302_PREVIEW_SENSOR_MODE, &value);
+	if(ret < 0) {
+		dev_err(ap1302->dev, "Failed to read AP1302_PREVIEW_SENSOR_MODE: %d\n", ret);
+		return ret;
+	}
+
+	/* Setting CROP_CTL to 0x2 (BITS 13:12)
+	0x2 = Crop image at the end of AP1302 image pipe on the input to
+	resample (scaler). ROI from the sensor and throughout the image
+	pipe remains as set by context *_roi_x0/y0/x1/y1. Statistics can be
+	captured on image data beyond outputted image and auto-functions
+	can use it.	
+	*/
+	value |= AP1302_CROP_CTL_BITS;
+	ap1302_write(ap1302, AP1302_PREVIEW_SENSOR_MODE, value, NULL);
+	ret = ap1302_read(ap1302, AP1302_PREVIEW_SENSOR_MODE, &value);
+	if(ret < 0) {
+		dev_err(ap1302->dev, "Failed to read AP1302_PREVIEW_SENSOR_MODE: %d\n", ret);
+		return ret;
+	}
+
+	u32 regVal = 0;
+
+	regVal = (sel->r.left * (AP1302_PREVIEW_ROI_RANGE))/resolution->width;
+	ap1302_write(ap1302, AP1302_PREVIEW_ROI_X0, regVal, NULL);
+
+	regVal = (sel->r.top * (AP1302_PREVIEW_ROI_RANGE))/resolution->height;
+	ap1302_write(ap1302, AP1302_PREVIEW_ROI_Y0, regVal, NULL);
+
+	regVal = ((sel->r.left + sel->r.width) * (AP1302_PREVIEW_ROI_RANGE))/resolution->width;
+	ap1302_write(ap1302, AP1302_PREVIEW_ROI_X1, regVal, NULL);
+
+	regVal = ((sel->r.top + sel->r.height) * (AP1302_PREVIEW_ROI_RANGE))/resolution->height;
+	ap1302_write(ap1302, AP1302_PREVIEW_ROI_Y1, regVal, NULL);
 
 	return 0;
 }
@@ -1165,7 +1242,7 @@ static const struct v4l2_subdev_pad_ops ap1302_pad_ops = {
 	.get_fmt = ap1302_get_fmt,
 	.set_fmt = ap1302_set_fmt,
 	.get_selection = ap1302_get_selection,
-	.set_selection = ap1302_get_selection,
+	.set_selection = ap1302_set_selection,
 };
 
 static const struct v4l2_subdev_video_ops ap1302_video_ops = {
