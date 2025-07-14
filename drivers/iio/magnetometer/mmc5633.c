@@ -637,8 +637,6 @@ static int mmc5633_buffer_predisable(struct iio_dev *indio_dev)
 	struct mmc5633_data *data = iio_priv(indio_dev);
 
 	mutex_lock(&data->mutex);
-	
-	int hpower = 0;
 
 	int crtl0_mask = MMC5633_CRTL0_CMM_FREQ_EN;
 	int crtl0_value = 0;
@@ -685,8 +683,7 @@ static const struct iio_trigger_ops mmc5633_trigger_ops = {
 	.validate_device = iio_trigger_validate_own_device,
 };
 
-static int mmc5633_probe(struct i2c_client *client,
-			  const struct i2c_device_id *id)
+static int mmc5633_probe(struct i2c_client *client)
 {
 	struct mmc5633_data *data;
 	struct iio_dev *indio_dev;
@@ -718,8 +715,8 @@ static int mmc5633_probe(struct i2c_client *client,
 	indio_dev->modes = INDIO_DIRECT_MODE | INDIO_BUFFER_TRIGGERED;
 
 
-	data->trig = devm_iio_trigger_alloc(&client->dev, "%s-dev%d",
-					  indio_dev->name, indio_dev->id);
+	data->trig = devm_iio_trigger_alloc(&client->dev, "%s-dev",
+					  indio_dev->name);
 	if (!data->trig)
 		return -ENOMEM;
 
