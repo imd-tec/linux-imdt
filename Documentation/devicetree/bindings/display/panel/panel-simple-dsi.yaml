@@ -30,6 +30,8 @@ properties:
       - auo,b080uan01
         # Boe Corporation 8.0" WUXGA TFT LCD panel
       - boe,tv080wum-nl0
+        # IMDT, im-msc-006 7" TFT 1024x600 LCD panel 
+      - imdt,im-msc-006
         # Innolux P079ZCA 7.85" 768x1024 TFT LCD panel
       - innolux,p079zca
         # JDI FHD_R63452 1080x1920 5.2" IPS LCD Panel
@@ -54,7 +56,6 @@ properties:
       - samsung,sofef00
         # Shangai Top Display Optoelectronics 7" TL070WSH30 1024x600 TFT LCD panel
       - tdo,tl070wsh30
-
   reg:
     maxItems: 1
     description: DSI virtual channel
