@@ -110,7 +110,6 @@
 		model = "imx-audio-micfil";
 		cpu-dai = <&micfil>;
 	};
-
 };
 
 &A53_0 {
@@ -404,7 +403,24 @@
 };
 
 &i2c5 {
-	status = "disabled";
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c5>;
+	status = "okay";
+
+	touch: gt911@14 {
+		compatible = "goodix,gt911";
+		reg = <0x14>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touchscreen>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&gpio2 6 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+
+	};	
 };
 
 &i2c6 {
@@ -492,6 +508,8 @@
 	panel0: panel {
 		compatible = "imdt,im-msc-006";
 		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_panel_reset>;
 		reset-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
 		status = "okay";
 
@@ -703,10 +721,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_HDMI_DDC_SCL__HDMIMIX_HDMI_SCL	0x400001c3
-			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c3
 			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
 			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
 			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106 /* PER_PD_DIS:  Power for Peripherals domain. Should be low (0x106). */
@@ -795,14 +812,14 @@
 			MX8MP_IOMUXC_I2C4_SDA__I2C4_SDA		0x400001c2
 		>;
 	};
-/*
+
 	pinctrl_i2c5: i2c5grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_HDMI_DDC_SCL__I2C5_SCL		0x400001c2
 			MX8MP_IOMUXC_HDMI_DDC_SDA__I2C5_SDA		0x400001c2
 		>;
 	};
-*/
+
 	pinctrl_i2c6: i2c6grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI5_RXFS__I2C6_SCL	0x400001c2
@@ -1036,9 +1053,16 @@
 		>;
 	};
 
-	panel_reset_pins: panel_reset {
+	pinctrl_panel_reset: panel_reset {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07 0x106 /* GPIO output, no pull, fast slew */
+			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07 0x106
+		>;
+	};
+
+	pinctrl_touchscreen: touchscreen {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19 0x106 /* reset pin */
+			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06 0x100 /* input pin */
 		>;
 	};
 
