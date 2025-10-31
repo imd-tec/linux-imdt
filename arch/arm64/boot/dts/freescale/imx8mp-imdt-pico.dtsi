@@ -3,7 +3,7 @@
  * Copyright 2019 NXP
  * Copyright 2022 IMD Technologies
  */
-
+ 
 /dts-v1/;
 
 #include <dt-bindings/phy/phy-imx8-pcie.h>
@@ -402,27 +402,6 @@
 	};
 };
 
-&i2c5 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c5>;
-	status = "okay";
-
-	touch: gt911@14 {
-		compatible = "goodix,gt911";
-		reg = <0x14>;
-
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_touchscreen>;
-		interrupt-parent = <&gpio2>;
-		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;
-		irq-gpios = <&gpio2 6 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
-		status = "okay";
-
-	};	
-};
-
 &i2c6 {
 	clock-frequency = <384000>;
 	pinctrl-names = "default";
@@ -481,74 +460,6 @@
 			"M2E_BT_ENn",
 			"M2E_WLAN_ENn";
 	};
-};
-
-&gpio1 {
-	disp_bl_en {
-		gpio-hog;
-		gpios = <1 GPIO_ACTIVE_HIGH>;  /* GPIO1_IO01 */
-		output-high;
-		line-name = "disp_bl_en";
-	};
-};
-
-&mipi_dsi {
-	status = "okay";
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	port@1 {
-		reg = <1>;
-		mipi_dsi_out: endpoint {
-			remote-endpoint = <&panel_in>;
-			data-lanes = <1 2 3 4>; /* physical lanes 1..4 are used */
-		};
-	};
-
-	panel0: panel {
-		compatible = "imdt,im-msc-006";
-		reg = <0>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_panel_reset>;
-		reset-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
-		status = "okay";
-
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&mipi_dsi_out>;
-			};
-		};
-	};
-};
-
-&lcdif1 {
-	status = "okay";
-};
-
-&irqsteer_hdmi {
-	status = "okay";
-};
-
-&hdmi_blk_ctrl {
-	status = "okay";
-};
-
-&hdmi_pavi {
-	status = "okay";
-};
-
-&hdmi {
-	status = "okay";
-};
-
-&hdmiphy {
-	status = "okay";
-};
-
-&lcdif3 {
-	status = "okay";
-	thres-low  = <1 2>;             /* (FIFO * 1 / 2) */
-	thres-high = <3 4>;             /* (FIFO * 3 / 4) */
 };
 
 &snvs_pwrkey {
@@ -724,12 +635,9 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
-			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
 			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x106 /* PER_PD_DIS:  Power for Peripherals domain. Should be low (0x106). */
 			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x146 /* M2_PD_EN: M.2 Power enable, (set high to enable 0x146). */
 			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24		0x06  /*m2e coex?*/
-			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01		0x106 /* LCD backlight enable */
 		>;
 	};
 
@@ -1052,20 +960,6 @@
 			MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2	0x59
 		>;
 	};
-
-	pinctrl_panel_reset: panel_reset {
-		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07 0x106
-		>;
-	};
-
-	pinctrl_touchscreen: touchscreen {
-		fsl,pins = <
-			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19 0x106 /* reset pin */
-			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06 0x100 /* input pin */
-		>;
-	};
-
 };
 
 &vpu_g1 {

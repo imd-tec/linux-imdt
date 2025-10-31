@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 IMD Technologies
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx8mp-pinfunc.h"
+
+&lcdif1 {
+	status = "okay";
+};
+
+&gpio1 {
+	disp_bl_en {
+		gpio-hog;
+		gpios = <1 GPIO_ACTIVE_HIGH>;  /* GPIO1_IO01 */
+		output-high;
+		line-name = "disp_bl_en";
+	};
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port@1 {
+		reg = <1>;
+		mipi_dsi_out: endpoint {
+			remote-endpoint = <&panel_in>;
+			data-lanes = <1 2 3 4>; /* physical lanes 1..4 are used */
+		};
+	};
+
+	panel0: panel {
+		compatible = "imdt,im-msc-006";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_panel_reset>;
+		reset-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
+		status = "okay";
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
+		};
+	};
+};
+
+&i2c5 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c5>;
+	status = "okay";
+
+	touch: gt911@14 {
+		compatible = "goodix,gt911";
+		reg = <0x14>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touchscreen>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&gpio2 6 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+
+	};
+};
+
+&iomuxc {
+
+	pinctrl_panel_reset: panel_reset {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07 0x106
+		>;
+	};
+
+	pinctrl_i2c5: i2c5grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_HDMI_DDC_SCL__I2C5_SCL		0x400001c2
+			MX8MP_IOMUXC_HDMI_DDC_SDA__I2C5_SDA		0x400001c2
+		>;
+	};
+
+	pinctrl_touchscreen: touchscreen {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19 0x106 /* reset pin */
+			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06 0x100 /* input pin */
+		>;
+	};
+};
