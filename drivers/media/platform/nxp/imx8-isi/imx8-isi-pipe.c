@@ -40,6 +40,11 @@ static const struct mxc_isi_bus_format_info mxc_isi_bus_formats[] = {
 		.pads		= BIT(MXC_ISI_PIPE_PAD_SINK),
 		.encoding	= MXC_ISI_ENC_YUV,
 	}, {
+		.mbus_code	= MEDIA_BUS_FMT_YUYV8_1X16,
+		.output		= MEDIA_BUS_FMT_YUV8_1X24,
+		.pads		= BIT(MXC_ISI_PIPE_PAD_SINK),
+		.encoding	= MXC_ISI_ENC_YUV,
+	}, {
 		.mbus_code	= MEDIA_BUS_FMT_YUV8_1X24,
 		.output		= MEDIA_BUS_FMT_YUV8_1X24,
 		.pads		= BIT(MXC_ISI_PIPE_PAD_SOURCE),
@@ -548,6 +553,7 @@ static int mxc_isi_pipe_set_fmt(struct v4l2_subdev *sd,
 		mf->width = clamp(mf->width, MXC_ISI_MIN_WIDTH, max_width);
 		mf->height = clamp(mf->height, MXC_ISI_MIN_HEIGHT,
 				   MXC_ISI_MAX_HEIGHT);
+		mf->field = V4L2_FIELD_NONE;
 
 		/* Propagate the format to the source pad. */
 		rect = mxc_isi_pipe_get_pad_compose(pipe, state,

@@ -1584,34 +1584,31 @@
 				status = "disabled";
 
 				isi_0: isi@32e00000 {
-					compatible = "fsl,imx8mp-isi", "fsl,imx8mn-isi";
-					reg = <0x32e00000 0x2000>;
-					interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
-					interface = <2 0 2>;
-					clocks = <&clk IMX8MP_CLK_MEDIA_AXI>,
-						 <&clk IMX8MP_CLK_MEDIA_APB>,
-						 <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
+					compatible = "nxp,imx8mp-isi";
+					reg = <0x32e00000 0x4000>;
+					interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>,
+						     <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
 						 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
-					clock-names = "disp_axi",
-						      "disp_apb",
-						      "disp_axi_root",
-						      "disp_apb_root";
+					clock-names = "axi", "apb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
 							  <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
 					assigned-clock-rates = <500000000>, <200000000>;
 					power-domains = <&media_blk_ctrl IMX8MP_MEDIABLK_PD_ISI>;
-					isi_chain = <&isi_chain_buf>;
+					fsl,blk-ctrl = <&media_blk_ctrl>;
 					status = "disabled";
 
-					cap_device {
-						compatible = "imx-isi-capture";
-						status = "disabled";
-					};
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
 
-					m2m_device{
-						compatible = "imx-isi-m2m";
-						fsl,gpr = <&media_blk_ctrl>;
-						status = "disabled";
+						port@0 {
+							reg = <0>;
+						};
+
+						port@1 {
+							reg = <1>;
+						};
 					};
 				};
 

@@ -40,6 +40,10 @@
 #include <linux/v4l2-mediabus.h>
 #include <linux/reset.h>
 #include <linux/version.h>
+#include <media/mipi-csi2.h>
+#include <media/v4l2-async.h>
+#include <media/v4l2-fwnode.h>
+#include <media/v4l2-mc.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-event.h>
@@ -61,7 +65,7 @@
 #define MIPI_CSIS_VC1_PAD_SOURCE	5
 #define MIPI_CSIS_VC2_PAD_SOURCE	6
 #define MIPI_CSIS_VC3_PAD_SOURCE	7
-#define MIPI_CSIS_VCX_PADS_NUM		8
+#define MIPI_CSIS_VCX_PADS_NUM		5
 
 
 #define MIPI_CSIS_DEF_PIX_WIDTH		1920
@@ -293,6 +297,7 @@ struct csis_pix_format {
 	u32 code;
 	u32 fmt_reg;
 	u8 data_alignment;
+	u8 data_type;		/* MIPI CSI-2 data type */
 };
 
 struct csis_pktbuf {
@@ -455,70 +460,87 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.code = MEDIA_BUS_FMT_YUYV8_2X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_YUV422_8B,
 	}, {
 		.code = MEDIA_BUS_FMT_RGB888_1X24,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RGB888,
 		.data_alignment = 24,
+		.data_type = MIPI_CSI2_DT_RGB888,
 	}, {
 		.code = MEDIA_BUS_FMT_UYVY8_1X16,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_YUV422_8B,
 	}, {
 		.code = MEDIA_BUS_FMT_UYVY8_2X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_YUV422_8B,
 	}, {
 		.code = MEDIA_BUS_FMT_VYUY8_2X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_YUV422_8B,
 	}, {
 		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
 		.data_alignment = 8,
+		.data_type = MIPI_CSI2_DT_RAW8,
 	}, {
 		.code = MEDIA_BUS_FMT_SGBRG8_1X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
 		.data_alignment = 8,
+		.data_type = MIPI_CSI2_DT_RAW8,
 	}, {
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
 		.data_alignment = 8,
+		.data_type = MIPI_CSI2_DT_RAW8,
 	}, {
 		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
 		.data_alignment = 8,
+		.data_type = MIPI_CSI2_DT_RAW8,
 	}, {
 		.code = MEDIA_BUS_FMT_SBGGR10_1X10,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW10,
 	}, {
 		.code = MEDIA_BUS_FMT_SGBRG10_1X10,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW10,
 	}, {
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW10,
 	}, {
 		.code = MEDIA_BUS_FMT_SRGGB10_1X10,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW10,
 	}, {
 		.code = MEDIA_BUS_FMT_SBGGR12_1X12,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW12,
 	}, {
 		.code = MEDIA_BUS_FMT_SGBRG12_1X12,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW12,
 	}, {
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW12,
 	}, {
 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
 		.data_alignment = 16,
+		.data_type = MIPI_CSI2_DT_RAW12,
 	},
 };
 
@@ -594,6 +616,23 @@ static inline struct csi_state *notifier_to_mipi_dev(struct v4l2_async_notifier 
 {
 	return container_of(n, struct csi_state, subdev_notifier);
 }
+
+static int mipi_csis_notify_bound(struct v4l2_async_notifier *notifier,
+				  struct v4l2_subdev *sd,
+				  struct v4l2_async_connection *asd)
+{
+	struct csi_state *state = notifier_to_mipi_dev(notifier);
+	struct media_pad *sink = &state->sd.entity.pads[MIPI_CSIS_VC0_PAD_SINK];
+	int ret;
+
+	dev_dbg(state->sd.dev, "sensor bound: %s\n", sd->name);
+	ret = v4l2_create_fwnode_links_to_pad(sd, sink, MEDIA_LNK_FL_ENABLED);
+	return ret;
+}
+
+static const struct v4l2_async_notifier_operations mipi_csis_notify_ops = {
+	.bound = mipi_csis_notify_bound,
+};
 
 static struct media_pad *csis_get_remote_sensor_pad(struct csi_state *state)
 {
@@ -1115,11 +1154,23 @@ static int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on)
 static int mipi_csis_s_stream(struct v4l2_subdev *mipi_sd, int enable)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
+	struct v4l2_subdev *sen_sd;
+	int ret;
 
 	v4l2_dbg(1, debug, mipi_sd, "%s: %d, state: 0x%x\n",
 		 __func__, enable, state->flags);
 
+	sen_sd = csis_get_remote_subdev(state, __func__);
+
 	if (enable) {
+		/* Start the upstream sensor before enabling the CSI-2 receiver */
+		if (sen_sd) {
+			ret = v4l2_subdev_call(sen_sd, video, s_stream, 1);
+			if (ret && ret != -ENOIOCTLCMD) {
+				v4l2_err(mipi_sd, "upstream s_stream(1) failed: %d\n", ret);
+				return ret;
+			}
+		}
 		pm_runtime_get_sync(state->dev);
 		mipi_csis_clear_counters(state);
 		mipi_csis_start_stream(state);
@@ -1130,6 +1181,9 @@ static int mipi_csis_s_stream(struct v4l2_subdev *mipi_sd, int enable)
 		if (debug > 0)
 			mipi_csis_log_counters(state, true);
 		pm_runtime_put(state->dev);
+		/* Stop the upstream sensor after disabling the CSI-2 receiver */
+		if (sen_sd)
+			v4l2_subdev_call(sen_sd, video, s_stream, 0);
 	}
 
 	return 0;
@@ -1174,6 +1228,7 @@ static int mipi_csis_set_fmt(struct v4l2_subdev *mipi_sd,
 	}
 
 	state->csis_fmt = csis_fmt;
+	state->format = *mf;
 
 	return 0;
 }
@@ -1183,19 +1238,17 @@ static int mipi_csis_get_fmt(struct v4l2_subdev *mipi_sd,
 			     struct v4l2_subdev_format *format)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
-	struct v4l2_mbus_framefmt *mf = &state->format;
 	struct media_pad *source_pad;
 	struct v4l2_subdev *sen_sd;
 	int ret;
 
-	/* Get remote source pad */
+	/* Delegate to upstream subdev so we report the actual source format */
 	source_pad = csis_get_remote_sensor_pad(state);
 	if (!source_pad) {
 		v4l2_err(&state->sd, "%s, No remote pad found!\n", __func__);
 		return -EINVAL;
 	}
 
-	/* Get remote source pad subdev */
 	sen_sd = csis_get_remote_subdev(state, __func__);
 	if (!sen_sd) {
 		v4l2_err(&state->sd, "%s, No remote subdev found!\n", __func__);
@@ -1204,13 +1257,10 @@ static int mipi_csis_get_fmt(struct v4l2_subdev *mipi_sd,
 
 	format->pad = source_pad->index;
 	ret = v4l2_subdev_call(sen_sd, pad, get_fmt, NULL, format);
-	if (ret < 0) {
-		v4l2_err(&state->sd, "%s, call get_fmt of subdev failed!\n", __func__);
-		return ret;
-	}
-
-	memcpy(mf, &format->format, sizeof(struct v4l2_mbus_framefmt));
-	return 0;
+	if (ret < 0)
+		v4l2_err(&state->sd, "%s: upstream get_fmt failed: %d\n",
+			 __func__, ret);
+	return ret;
 }
 
 static int mipi_csis_s_rx_buffer(struct v4l2_subdev *mipi_sd, void *buf,
@@ -1464,11 +1514,38 @@ static struct v4l2_subdev_video_ops mipi_csis_video_ops = {
 	.s_frame_interval = mipi_csis_s_frame_interval,
 };
 
+static int mipi_csis_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
+				    struct v4l2_mbus_frame_desc *fd)
+{
+	struct csi_state *state = mipi_sd_to_csi_state(sd);
+	struct v4l2_mbus_frame_desc_entry *entry = &fd->entry[0];
+
+	if (pad < MIPI_CSIS_VC0_PAD_SOURCE)
+		return -EINVAL;
+
+	if (!state->csis_fmt)
+		return -EINVAL;
+
+	memset(fd, 0, sizeof(*fd));
+
+	fd->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
+	fd->num_entries = 1;
+
+	entry->stream = 0;
+	entry->flags = 0;
+	entry->pixelcode = state->format.code;
+	entry->bus.csi2.vc = pad - MIPI_CSIS_VC0_PAD_SOURCE;
+	entry->bus.csi2.dt = state->csis_fmt->data_type;
+
+	return 0;
+}
+
 static const struct v4l2_subdev_pad_ops mipi_csis_pad_ops = {
 	.enum_frame_size       = mipi_csis_enum_framesizes,
 	.enum_frame_interval   = mipi_csis_enum_frameintervals,
 	.get_fmt               = mipi_csis_get_fmt,
 	.set_fmt               = mipi_csis_set_fmt,
+	.get_frame_desc        = mipi_csis_get_frame_desc,
 };
 
 static struct v4l2_subdev_ops mipi_csis_subdev_ops = {
@@ -1571,6 +1648,7 @@ static int mipi_csis_subdev_init(struct v4l2_subdev *mipi_sd,
 	state->format.code   = mipi_csis_formats[0].code;
 	state->format.width  = MIPI_CSIS_DEF_PIX_WIDTH;
 	state->format.height = MIPI_CSIS_DEF_PIX_HEIGHT;
+	state->format.field  = V4L2_FIELD_NONE;
 
 	/* This allows to retrieve the platform device id by the host driver */
 	v4l2_set_subdevdata(mipi_sd, state);
@@ -2043,9 +2121,6 @@ static int mipi_csis_probe(struct platform_device *pdev)
 	state->pads[MIPI_CSIS_VC2_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
 	state->pads[MIPI_CSIS_VC3_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
 	state->pads[MIPI_CSIS_VC0_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
-	state->pads[MIPI_CSIS_VC1_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
-	state->pads[MIPI_CSIS_VC2_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
-	state->pads[MIPI_CSIS_VC3_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
 	ret = media_entity_pads_init(&state->sd.entity, MIPI_CSIS_VCX_PADS_NUM, state->pads);
 	if (ret < 0) {
 		dev_err(dev, "mipi csi entity pad init failed\n");
@@ -2056,6 +2131,40 @@ static int mipi_csis_probe(struct platform_device *pdev)
 	state->sd.entity.ops = &mipi_csi2_sd_media_ops;
 
 	pm_runtime_enable(dev);
+
+	ret = v4l2_async_register_subdev(&state->sd);
+	if (ret < 0) {
+		dev_err(dev, "failed to register async subdev: %d\n", ret);
+		pm_runtime_disable(dev);
+		media_entity_cleanup(&state->sd.entity);
+		return ret;
+	}
+
+	/* Register a notifier to discover and link the upstream sensor (e.g. AP1302) */
+	{
+		struct fwnode_handle *ep;
+
+		v4l2_async_nf_init(&state->subdev_notifier, state->sd.v4l2_dev);
+		state->subdev_notifier.ops = &mipi_csis_notify_ops;
+
+		ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(dev), 0, 0,
+						     FWNODE_GRAPH_ENDPOINT_NEXT);
+		if (ep) {
+			v4l2_async_nf_add_fwnode_remote(&state->subdev_notifier, ep,
+							struct v4l2_async_connection);
+			fwnode_handle_put(ep);
+
+			ret = v4l2_async_nf_register(&state->subdev_notifier);
+			if (ret < 0) {
+				dev_err(dev, "failed to register sensor notifier: %d\n", ret);
+				v4l2_async_nf_cleanup(&state->subdev_notifier);
+				v4l2_async_unregister_subdev(&state->sd);
+				pm_runtime_disable(dev);
+				media_entity_cleanup(&state->sd.entity);
+				return ret;
+			}
+		}
+	}
 
 	dev_info(&pdev->dev, "lanes: %d, hs_settle: %d, clk_settle: %d, wclk: %d, freq: %u\n",
 		 state->num_lanes, state->hs_settle, state->clk_settle,
@@ -2119,6 +2228,9 @@ static int mipi_csis_remove(struct platform_device *pdev)
 {
 	struct csi_state *state = platform_get_drvdata(pdev);
 
+	v4l2_async_nf_unregister(&state->subdev_notifier);
+	v4l2_async_nf_cleanup(&state->subdev_notifier);
+	v4l2_async_unregister_subdev(&state->sd);
 	media_entity_cleanup(&state->sd.entity);
 	pm_runtime_disable(&pdev->dev);
 

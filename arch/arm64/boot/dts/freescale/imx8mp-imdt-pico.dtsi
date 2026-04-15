@@ -1010,21 +1010,36 @@
 			csis-wclk;
 		};
 	};
+
+	port@1 {
+		reg = <1>;
+		mipi_csi0_out: endpoint {
+			remote-endpoint = <&isi_in_0>;
+		};
+	};
 };
 
 &cameradev {
 	status = "okay";
 };
 
+/delete-node/ &isi_1;
+
+/ {
+	aliases {
+		/delete-property/ isi1;
+	};
+};
+
 &isi_0 {
 	status = "okay";
 
-	cap_device {
-		status = "okay";
-	};
-
-	m2m_device {
-		status = "okay";
+	ports {
+		port@0 {
+			isi_in_0: endpoint {
+				remote-endpoint = <&mipi_csi0_out>;
+			};
+		};
 	};
 };
 

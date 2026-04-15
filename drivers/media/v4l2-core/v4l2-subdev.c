@@ -1132,10 +1132,15 @@ int v4l2_subdev_link_validate_default(struct v4l2_subdev *sd,
 	if (pass)
 		return 0;
 
-	dev_dbg(sd->entity.graph_obj.mdev->dev,
-		"%s: link was \"%s\":%u -> \"%s\":%u\n", __func__,
+	dev_err(sd->entity.graph_obj.mdev->dev,
+		"%s: link \"%s\":%u -> \"%s\":%u FAILED: src=%dx%d code=0x%x field=%u sink=%dx%d code=0x%x field=%u\n",
+		__func__,
 		link->source->entity->name, link->source->index,
-		link->sink->entity->name, link->sink->index);
+		link->sink->entity->name, link->sink->index,
+		source_fmt->format.width, source_fmt->format.height,
+		source_fmt->format.code, source_fmt->format.field,
+		sink_fmt->format.width, sink_fmt->format.height,
+		sink_fmt->format.code, sink_fmt->format.field);
 
 	return -EPIPE;
 }
