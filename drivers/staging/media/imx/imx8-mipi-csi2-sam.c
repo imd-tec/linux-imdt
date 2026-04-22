@@ -2132,19 +2132,15 @@ static int mipi_csis_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 
-	ret = v4l2_async_register_subdev(&state->sd);
-	if (ret < 0) {
-		dev_err(dev, "failed to register async subdev: %d\n", ret);
-		pm_runtime_disable(dev);
-		media_entity_cleanup(&state->sd.entity);
-		return ret;
-	}
-
-	/* Register a notifier to discover and link the upstream sensor (e.g. AP1302) */
+	/* Register a notifier to discover and link the upstream sensor (e.g. AP1302).
+	 * Must be registered before v4l2_async_register_subdev() so the framework
+	 * can set notifier->parent when ISI's notifier matches this subdev, ensuring
+	 * ISI's complete() fires after the sensor binds and creates its device node.
+	 */
 	{
 		struct fwnode_handle *ep;
 
-		v4l2_async_nf_init(&state->subdev_notifier, state->sd.v4l2_dev);
+		v4l2_async_subdev_nf_init(&state->subdev_notifier, &state->sd);
 		state->subdev_notifier.ops = &mipi_csis_notify_ops;
 
 		ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(dev), 0, 0,
@@ -2158,12 +2154,21 @@ static int mipi_csis_probe(struct platform_device *pdev)
 			if (ret < 0) {
 				dev_err(dev, "failed to register sensor notifier: %d\n", ret);
 				v4l2_async_nf_cleanup(&state->subdev_notifier);
-				v4l2_async_unregister_subdev(&state->sd);
 				pm_runtime_disable(dev);
 				media_entity_cleanup(&state->sd.entity);
 				return ret;
 			}
 		}
+	}
+
+	ret = v4l2_async_register_subdev(&state->sd);
+	if (ret < 0) {
+		dev_err(dev, "failed to register async subdev: %d\n", ret);
+		v4l2_async_nf_unregister(&state->subdev_notifier);
+		v4l2_async_nf_cleanup(&state->subdev_notifier);
+		pm_runtime_disable(dev);
+		media_entity_cleanup(&state->sd.entity);
+		return ret;
 	}
 
 	dev_info(&pdev->dev, "lanes: %d, hs_settle: %d, clk_settle: %d, wclk: %d, freq: %u\n",
