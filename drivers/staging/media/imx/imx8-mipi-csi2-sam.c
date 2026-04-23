@@ -2138,6 +2138,7 @@ static int mipi_csis_probe(struct platform_device *pdev)
 	 * ISI's complete() fires after the sensor binds and creates its device node.
 	 */
 	{
+		struct v4l2_async_connection *asc;
 		struct fwnode_handle *ep;
 
 		v4l2_async_subdev_nf_init(&state->subdev_notifier, &state->sd);
@@ -2146,9 +2147,18 @@ static int mipi_csis_probe(struct platform_device *pdev)
 		ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(dev), 0, 0,
 						     FWNODE_GRAPH_ENDPOINT_NEXT);
 		if (ep) {
-			v4l2_async_nf_add_fwnode_remote(&state->subdev_notifier, ep,
-							struct v4l2_async_connection);
+			asc = v4l2_async_nf_add_fwnode_remote(&state->subdev_notifier, ep,
+							      struct v4l2_async_connection);
 			fwnode_handle_put(ep);
+
+			if (IS_ERR(asc)) {
+				dev_err(dev, "failed to add sensor to notifier: %ld\n",
+					PTR_ERR(asc));
+				v4l2_async_nf_cleanup(&state->subdev_notifier);
+				pm_runtime_disable(dev);
+				media_entity_cleanup(&state->sd.entity);
+				return PTR_ERR(asc);
+			}
 
 			ret = v4l2_async_nf_register(&state->subdev_notifier);
 			if (ret < 0) {
