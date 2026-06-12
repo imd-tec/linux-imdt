@@ -1609,9 +1609,9 @@ static int mipi_csis_parse_dt(struct platform_device *pdev,
 	if (of_property_read_u32(node, "bus-width", &state->max_num_lanes))
 		return -EINVAL;
 
-	node = of_graph_get_next_endpoint(node, NULL);
+	node = of_graph_get_endpoint_by_regs(node, 0, -1);
 	if (!node) {
-		dev_err(&pdev->dev, "No port node\n");
+		dev_err(&pdev->dev, "No sensor endpoint node (port@0)\n");
 		return -EINVAL;
 	}
 
