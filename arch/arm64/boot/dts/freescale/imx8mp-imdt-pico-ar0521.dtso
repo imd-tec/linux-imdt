@@ -10,6 +10,12 @@
 &i2c4 
 {
 	camera@3c {
+		/*
+		 * Use the 2 lane AR0521 firmware. For the 4 lane firmware use
+		 * imx8mp-imdt-pico-ar0521-4lane.dtbo instead of this overlay.
+		 */
+		firmware-name = "ap1302_ar0521_single_fw_2lane.bin";
+
 		sensors {
 			onnn,model = "onnn,ar0521"; // Change the ONN model to be ar0521
 		};

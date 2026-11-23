@@ -13,7 +13,9 @@
 
 #include <linux/delay.h>
 #include <linux/firmware.h>
+#include <linux/property.h>
 #include <linux/regmap.h>
+#include <linux/string.h>
 #include <linux/ktime.h>
 
 static int ap1302_set_mipi_t3_clk(struct ap1302_device *ap1302)
@@ -50,24 +52,42 @@ int ap1302_request_firmware(struct ap1302_device *ap1302)
 		"_dual",
 	};
 
+	const char *fw_name;
 	unsigned int num_sensors;
 	unsigned int i;
 	char name[64];
 	int ret;
 
-	for (i = 0, num_sensors = 0; i < ARRAY_SIZE(ap1302->sensors); ++i) {
-		if (ap1302->sensors[i].present)
-			num_sensors++;
+	/*
+	 * The firmware image can be selected explicitly from the device tree
+	 * (e.g. to pick a firmware built for a specific sensor/adapter lane
+	 * configuration). Otherwise derive the name from the sensor model and
+	 * the number of sensors.
+	 */
+	ret = device_property_read_string(ap1302->dev, "firmware-name",
+					  &fw_name);
+	if (!ret) {
+		ret = strscpy(name, fw_name, sizeof(name));
+		if (ret < 0) {
+			dev_err(ap1302->dev, "Firmware name too long\n");
+			return -EINVAL;
+		}
+	} else {
+		for (i = 0, num_sensors = 0; i < ARRAY_SIZE(ap1302->sensors); ++i) {
+			if (ap1302->sensors[i].present)
+				num_sensors++;
+		}
+
+		ret = snprintf(name, sizeof(name), "ap1302_%s%s_fw.bin",
+			       ap1302->sensor_info->name,
+			       suffixes[num_sensors]);
+		if (ret >= sizeof(name)) {
+			dev_err(ap1302->dev, "Firmware name too long\n");
+			return -EINVAL;
+		}
 	}
 
-	ret = snprintf(name, sizeof(name), "ap1302_%s%s_fw.bin",
-		       ap1302->sensor_info->name, suffixes[num_sensors]);
-	if (ret >= sizeof(name)) {
-		dev_err(ap1302->dev, "Firmware name too long\n");
-		return -EINVAL;
-	}
-
-	dev_dbg(ap1302->dev, "Requesting firmware %s\n", name);
+	dev_info(ap1302->dev, "Requesting firmware %s\n", name);
 
 	ret = request_firmware(&ap1302->fw, name, ap1302->dev);
 	if (ret) {

@@ -214,11 +214,13 @@ DTC_FLAGS_imx8mp-imdt-pico-e:=-@
 DTC_FLAGS_imx8mp-imdt-pico-ar0521:=-@
 DTC_FLAGS_imx8mp-imdt-pico-display-HDMI:=-@
 DTC_FLAGS_imx8mp-imdt-pico-display-DSI:=-@
+DTC_FLAGS_imx8mp-imdt-pico-ar0521-4lane:=-@
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-imdt-pico.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-imdt-pico-e.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-imdt-pico-ar0521.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-imdt-pico-display-HDMI.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-imdt-pico-display-DSI.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-imdt-pico-ar0521-4lane.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb imx8mq-evk-usd-wifi.dtb \
 			  imx8mq-evk-usdhc2-m2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-ak4497.dtb imx8mq-evk-audio-tdm.dtb imx8mq-evk-pdm.dtb

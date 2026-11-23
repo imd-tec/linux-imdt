@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 IMD Technologies
+ */
+
+/dts-v1/;
+/plugin/;
+
+&i2c4 
+{
+	camera@3c {
+		/*
+		 * Use the 4 lane AR0521 firmware. For the 2 lane firmware use
+		 * imx8mp-imdt-pico-ar0521.dtbo instead of this overlay.
+		 */
+		firmware-name = "ap1302_ar0521_single_fw_4lane.bin";
+
+		sensors {
+			onnn,model = "onnn,ar0521"; // Change the ONN model to be ar0521
+		};
+	};
+};

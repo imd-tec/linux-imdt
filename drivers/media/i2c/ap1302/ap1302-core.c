@@ -74,24 +74,7 @@ MODULE_PARM_DESC(hinf_mipi_freq_tgt_hz, "MIPI clock for AP1302 in Hz.");
  *
  */
 
-static const struct ap1302_sensor_info ap1302_sensor_info[] = {
-	{
-		.model = "onnn,ar1335",
-		.name = "ar1335",
-		.i2c_addr = 0x36,
-		.resolution = { 4208, 3120 },
-		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
-	},
-	{
-		.model = "onnn,ar0521",
-		.name = "ar0521",
-		.i2c_addr = 0x36,
-		.resolution = { 2592, 1944 },
-		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
-	},
-};
-
-static const struct ap1302_mode ap1302_other_modes[] = {
+static const struct ap1302_mode ap1302_ar1335_modes[] = {
 	{
 		.resolution = { 4096, 3072 },
 		.min_frame_interval = { 1, 20 }
@@ -119,7 +102,7 @@ static const struct v4l2_fract ap1302_frame_intervals[] = {
 	{ 1, 60 },
 };
 
-static const struct ap1302_sensor_mode ap1302_sensor_modes[] = {
+static const struct ap1302_sensor_mode ap1302_ar1335_sensor_modes[] = {
 	{
 		.mode = 4,
 		.resolution = { 2104, 780 },
@@ -132,6 +115,63 @@ static const struct ap1302_sensor_mode ap1302_sensor_modes[] = {
 		.mode = 0,
 		.resolution = { 4208, 3120 },
 		.min_frame_interval = { 1, 12 }
+	},
+};
+
+/*
+ * All AR0521 output sizes are scaled from the native readout, which the
+ * 4-lane firmware runs at up to 60 fps.
+ */
+static const struct ap1302_mode ap1302_ar0521_modes[] = {
+	{
+		.resolution = { 2592, 1944 },
+		.min_frame_interval = { 1, 60 }
+	},	{
+		.resolution = { 1920, 1080 },
+		.min_frame_interval = { 1, 60 }
+	},	{
+		.resolution = { 1440, 1080 },
+		.min_frame_interval = { 1, 60 }
+	},	{
+		.resolution = { 1280, 720 },
+		.min_frame_interval = { 1, 60 }
+	},
+};
+
+/*
+ * AR0521 firmware modes: 0/1 = native 12/10-bit, 2/3 = bin2, 4/5 = bin4.
+ * Only the 10-bit native mode reaches 60 fps, so use it for every size.
+ */
+static const struct ap1302_sensor_mode ap1302_ar0521_sensor_modes[] = {
+	{
+		.mode = 1,
+		.resolution = { 2600, 1952 },
+		.min_frame_interval = { 1, 60 }
+	},
+};
+
+static const struct ap1302_sensor_info ap1302_sensor_info[] = {
+	{
+		.model = "onnn,ar1335",
+		.name = "ar1335",
+		.i2c_addr = 0x36,
+		.resolution = { 4208, 3120 },
+		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
+		.modes = ap1302_ar1335_modes,
+		.num_modes = ARRAY_SIZE(ap1302_ar1335_modes),
+		.sensor_modes = ap1302_ar1335_sensor_modes,
+		.num_sensor_modes = ARRAY_SIZE(ap1302_ar1335_sensor_modes),
+	},
+	{
+		.model = "onnn,ar0521",
+		.name = "ar0521",
+		.i2c_addr = 0x36,
+		.resolution = { 2592, 1944 },
+		.format = MEDIA_BUS_FMT_SGRBG10_1X10,
+		.modes = ap1302_ar0521_modes,
+		.num_modes = ARRAY_SIZE(ap1302_ar0521_modes),
+		.sensor_modes = ap1302_ar0521_sensor_modes,
+		.num_sensor_modes = ARRAY_SIZE(ap1302_ar0521_sensor_modes),
 	},
 };
 
@@ -596,9 +636,11 @@ static int ap1302_enum_frame_size(struct v4l2_subdev *sd,
 			return -EINVAL;
 		}
 
-		if (fse->index < ARRAY_SIZE(ap1302_other_modes)) {
-			fse->min_width = fse->max_width = ap1302_other_modes[fse->index].resolution.width;
-			fse->min_height = fse->max_height = ap1302_other_modes[fse->index].resolution.height;
+		if (fse->index < ap1302->sensor_info->num_modes) {
+			const struct ap1302_mode *mode = &ap1302->sensor_info->modes[fse->index];
+
+			fse->min_width = fse->max_width = mode->resolution.width;
+			fse->min_height = fse->max_height = mode->resolution.height;
 		} else {
 			dev_dbg(sd->dev, "ap1302_enum_frame_size: unsupported frame size");
 			return -EINVAL;
@@ -613,6 +655,8 @@ static int ap1302_enum_frame_interval(
 	struct v4l2_subdev_state *cfg,
 	struct v4l2_subdev_frame_interval_enum *fie)
 {
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+	const struct ap1302_sensor_info *info = ap1302->sensor_info;
 	unsigned int i;
 
 	dev_dbg(sd->dev, "ap1302_enum_frame_interval: index = %u\n", fie->index);
@@ -629,27 +673,22 @@ static int ap1302_enum_frame_interval(
 		return -EINVAL;
 	}
 
-	if (fie->index < ARRAY_SIZE(ap1302_frame_intervals)) {
-		for (i = 0; i < ARRAY_SIZE(ap1302_other_modes); i++) {
-			if ((fie->width == ap1302_other_modes[i].resolution.width) &&
-			    (fie->height == ap1302_other_modes[i].resolution.height)) {
-				if (ap1302_frame_intervals[fie->index].denominator <= ap1302_other_modes[i].min_frame_interval.denominator) {
-					fie->interval = ap1302_frame_intervals[fie->index];
-					break;
-				} else {
-					return -EINVAL;
-				}
-
-			} else {
-				continue;
-			}
-		}
-
-	} else {
+	if (fie->index >= ARRAY_SIZE(ap1302_frame_intervals))
 		return -EINVAL;
+
+	for (i = 0; i < info->num_modes; i++) {
+		if ((fie->width == info->modes[i].resolution.width) &&
+		    (fie->height == info->modes[i].resolution.height)) {
+			if (ap1302_frame_intervals[fie->index].denominator > info->modes[i].min_frame_interval.denominator)
+				return -EINVAL;
+
+			fie->interval = ap1302_frame_intervals[fie->index];
+			return 0;
+		}
 	}
 
-	return 0;
+	/* Size not offered on the source pad */
+	return -EINVAL;
 }
 
 static int ap1302_get_fmt(struct v4l2_subdev *sd,
@@ -715,11 +754,13 @@ static int ap1302_set_fmt(struct v4l2_subdev *sd,
 		ap1302->formats[fmt->pad].info = info;
 
 	/* Set the sensor mode, based on the resolution */
-	for (i = 0; i < ARRAY_SIZE(ap1302_sensor_modes); i++) {
-		if ((format->width <= ap1302_sensor_modes[i].resolution.width) &&
-		    (format->height <= ap1302_sensor_modes[i].resolution.height)) {
-			dev_dbg(sd->dev, "%s: setting sensor to mode %u\n", __func__, ap1302_sensor_modes[i].mode);
-			ap1302_write(ap1302, AP1302_PREVIEW_SENSOR_MODE, ap1302_sensor_modes[i].mode, NULL);
+	for (i = 0; i < ap1302->sensor_info->num_sensor_modes; i++) {
+		const struct ap1302_sensor_mode *mode = &ap1302->sensor_info->sensor_modes[i];
+
+		if ((format->width <= mode->resolution.width) &&
+		    (format->height <= mode->resolution.height)) {
+			dev_dbg(sd->dev, "%s: setting sensor to mode %u\n", __func__, mode->mode);
+			ap1302_write(ap1302, AP1302_PREVIEW_SENSOR_MODE, mode->mode, NULL);
 			break;
 		}
 	}

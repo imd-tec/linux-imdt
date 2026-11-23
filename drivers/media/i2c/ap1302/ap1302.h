@@ -414,12 +414,21 @@ struct ap1302_sensor_supply {
 	unsigned int post_delay_us;
 };
 
+struct ap1302_mode;
+struct ap1302_sensor_mode;
+
 struct ap1302_sensor_info {
 	const char *model;
 	const char *name;
 	unsigned int i2c_addr;
 	struct ap1302_size resolution;
 	u32 format;
+	/* Output sizes offered on the source pad, with their max frame rate */
+	const struct ap1302_mode *modes;
+	unsigned int num_modes;
+	/* Firmware sensor modes (sensor0_conf index), smallest first */
+	const struct ap1302_sensor_mode *sensor_modes;
+	unsigned int num_sensor_modes;
 };
 
 struct ap1302_sensor {
